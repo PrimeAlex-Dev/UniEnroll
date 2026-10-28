@@ -318,3 +318,19 @@ Một giai đoạn Backend được coi là hoàn thành khi và chỉ khi:
 2. Toàn bộ Entity và Constraint ở Database được thiết lập (Unique, Foreign Key, Check, Indexes).
 3. 100% các Unit Test và Integration Test của giai đoạn đó chạy vượt qua (`mvn clean test` đạt `BUILD SUCCESS`).
 4. Giai đoạn 5 (Core Engine) bắt buộc phải vượt qua bài kiểm thử đồng thời (Concurrency Test) với 50 luồng không phát sinh sai lệch dữ liệu.
+
+---
+
+## 6. BẢNG THEO DÕI TIẾN ĐỘ THỰC TẾ (COMPLETION STATUS)
+
+| Giai đoạn | Module / Use Case | Phạm vi triển khai | Trạng thái | Kiểm thử tự động (`mvn clean test`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Phase 0** | Hạ tầng nền tảng & Core | Wrapper DTOs, ErrorCode, BaseEntity, GlobalExceptionHandler | ✅ **ĐÃ HOÀN THÀNH** | PASS (Tích hợp trong mọi controller test) |
+| **Phase 1** | Module 1 (UC-01 $\rightarrow$ UC-04) | User, Role, Profiles, JWT, BCrypt, Auth & Admin Controllers | ✅ **ĐÃ HOÀN THÀNH** | PASS (`JwtTokenProviderTest`, `AuthControllerTest`, `AdminUserControllerTest`) |
+| **Phase 2** | Module 2 (UC-05 $\rightarrow$ UC-07) | Department, Course, Prerequisites, DFS Anti-cycle Algorithm | ✅ **ĐÃ HOÀN THÀNH** | PASS (`DepartmentControllerTest`, `CourseControllerTest`, `PrerequisiteCycleDetectionTest`) |
+| **Phase 3** | Module 3 (UC-08 $\rightarrow$ UC-11) | Semester, Room, CourseSection, ScheduleSlot, Collision Detector | ✅ **ĐÃ HOÀN THÀNH** | PASS (`AcademicSectionControllerTest`, `ScheduleCollisionDetectorTest`) |
+| **Phase 4** | Module 5 - Part 1 | GradeRecord, RegistrationAuditLog, GradeService, Async Event Listener | ✅ **ĐÃ HOÀN THÀNH** | PASS (`GradeServiceTest`, `AuditLogServiceTest`, `GradeControllerTest`) |
+| **Phase 5** | Module 4 (UC-12 $\rightarrow$ UC-16) | Registration Engine (BR-01 $\rightarrow$ BR-06), Pessimistic Lock, Timetable | ✅ **ĐÃ HOÀN THÀNH** | PASS (`RegistrationPipelineTest`, `RegistrationConcurrencyTest` 50 threads) |
+| **Phase 6** | Module 5 - Part 2 (UC-17 $\rightarrow$ UC-19) | Lecturer Class Roster, Occupancy Dashboard, Admin Audit Log Query | ✅ **ĐÃ HOÀN THÀNH** | PASS (`LecturerRosterTest`, `OccupancyReportTest`, `AdminAuditLogTest`) |
+| **Phase 7** | Tích hợp E2E & Seeder | DatabaseSeeder (SQL Server), Full E2E Lifecycle Integration Test | ✅ **ĐÃ HOÀN THÀNH** | PASS (`FullRegistrationLifecycleE2ETest`) - **72/72 tests passed** |
+

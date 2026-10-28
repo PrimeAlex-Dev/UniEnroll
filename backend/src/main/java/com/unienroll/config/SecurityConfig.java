@@ -50,7 +50,15 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/error"
                         ).permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/users/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/admin/departments/**").authenticated()
+                        .requestMatchers("/api/v1/admin/departments/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/academic/grades/student/**").authenticated()
+                        .requestMatchers("/api/v1/academic/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/lecturer/**").hasAnyRole("LECTURER", "STAFF", "ADMIN")
+                        .requestMatchers("/api/v1/admin/audit-logs/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/student/**").hasRole("STUDENT")
+                        .requestMatchers("/api/v1/sections/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)) // for H2 Console

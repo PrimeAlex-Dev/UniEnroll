@@ -38,6 +38,18 @@ class AuthControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private com.unienroll.modules.engine.repository.EnrollmentRecordRepository enrollmentRepository;
+
+    @Autowired
+    private com.unienroll.modules.auth.repository.StudentProfileRepository studentProfileRepository;
+
+    @Autowired
+    private com.unienroll.modules.auth.repository.LecturerProfileRepository lecturerProfileRepository;
+
+    @Autowired
+    private com.unienroll.modules.auth.repository.StaffProfileRepository staffProfileRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -48,6 +60,10 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
+        enrollmentRepository.deleteAll();
+        studentProfileRepository.deleteAll();
+        lecturerProfileRepository.deleteAll();
+        staffProfileRepository.deleteAll();
         userRepository.deleteAll();
 
         // Tạo tài khoản student active
