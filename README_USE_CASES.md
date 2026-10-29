@@ -1,415 +1,466 @@
 # TÀI LIỆU ĐẶC TẢ USE CASE CHI TIẾT (USE CASE SPECIFICATION)
-## DỰ ÁN: HỆ THỐNG ĐĂNG KÝ HỌC PHẦN TRỰC TUYẾN (UNIENROLL)
-**Phiên bản:** 1.1  
-**Ngày cập nhật:** 28/10/2026  
-**Trạng thái:** Đầy đủ 100% các Use Case (19/19 Use Cases)
+## DỰ ÁN: HỆ THỐNG ĐĂNG KÝ HỌC PHẦN TRỰC TUYẾN CHUẨN ĐẠI HỌC (UNIENROLL)
+**Phiên bản:** 2.0 (Đồng bộ 100% với Codebase Hiện tại)  
+**Ngày cập nhật:** 29/10/2026  
+**Trạng thái:** Đầy đủ 20/20 Use Cases (Toàn bộ 5 Modules Nghiệp vụ)
 
 ---
 
 ## 1. TỔNG QUAN HỆ THỐNG VÀ CÁC TÁC TỬ (ACTORS)
 
-Hệ thống UniEnroll phục vụ 4 nhóm tác tử chính với phạm vi quyền hạn và trách nhiệm được phân tách nghiêm ngặt:
+Hệ thống UniEnroll phục vụ 4 nhóm tác tử (Actors) chính với phạm vi quyền hạn và trách nhiệm được phân tách nghiêm ngặt thông qua cơ chế Role-Based Access Control (RBAC):
 
 ```mermaid
 flowchart TD
-    subgraph Actors [Các Tác tử trong Hệ thống]
-        STU["Sinh viên (Student)"]
-        LEC["Giảng viên (Lecturer)"]
-        STAFF["Cán bộ Đào tạo (Academic Staff)"]
-        ADMIN["Quản trị viên (System Administrator)"]
+    subgraph Actors [4 Tác Tử trong Hệ Thống]
+        ADMIN["Quản trị viên<br/>(System Administrator)<br/><code>ROLE_ADMIN</code>"]
+        STAFF["Cán bộ Đào tạo<br/>(Academic Staff)<br/><code>ROLE_STAFF</code>"]
+        LEC["Giảng viên<br/>(Lecturer)<br/><code>ROLE_LECTURER</code>"]
+        STU["Sinh viên<br/>(Student)<br/><code>ROLE_STUDENT</code>"]
     end
 
-    subgraph Modules [5 Module Nghiệp vụ Độc lập]
-        M1["Module 1: Auth & RBAC"]
-        M2["Module 2: Curriculum & Catalog"]
-        M3["Module 3: Section & Scheduling"]
-        M4["Module 4: Registration Engine"]
-        M5["Module 5: Records & Auditing"]
+    subgraph Modules [5 Phân Hệ Nghiệp Vụ Cốt Lõi]
+        M1["Module 1: Auth & User Identity<br/>(com.unienroll.modules.auth)"]
+        M2["Module 2: Curriculum & Catalog<br/>(com.unienroll.modules.curriculum)"]
+        M3["Module 3: Scheduling & Infrastructure<br/>(com.unienroll.modules.scheduling)"]
+        M4["Module 4: Registration Engine<br/>(com.unienroll.modules.engine)"]
+        M5["Module 5: Reporting, Grading & Audit<br/>(com.unienroll.modules.reporting)"]
     end
 
     ADMIN --> M1
     ADMIN --> M5
+    STAFF --> M1
     STAFF --> M2
     STAFF --> M3
     STAFF --> M4
     STAFF --> M5
-    STU --> M4
-    STU --> M1
-    LEC --> M5
     LEC --> M1
+    LEC --> M5
+    STU --> M1
+    STU --> M4
+    STU --> M5
 ```
 
 ### Danh mục Tác tử (Actors Catalog)
-1. **Quản trị viên (System Administrator - `ROLE_ADMIN`):** Quản lý định danh tài khoản, phân bổ vai trò người dùng, theo dõi và tra cứu toàn bộ nhật ký kiểm toán hệ thống.
-2. **Cán bộ Đào tạo (Academic Staff - `ROLE_STAFF`):** Quản lý cơ cấu khoa, danh mục môn học, cây điều kiện môn tiên quyết; lập học kỳ, phòng học, mở lớp học phần, phân công giảng viên, xếp lịch; cấu hình đợt mở cổng đăng ký và theo dõi báo cáo lấp đầy.
-3. **Sinh viên (Student - `ROLE_STUDENT`):** Tra cứu chương trình đào tạo, tìm kiếm lớp mở; thực hiện các giao dịch đăng ký/hủy học phần theo thời gian thực; xem thời khóa biểu tuần và tiến độ tích lũy tín chỉ.
-4. **Giảng viên (Lecturer - `ROLE_LECTURER`):** Tra cứu thời khóa biểu giảng dạy được phân công; truy xuất danh sách sinh viên chính thức của các lớp phụ trách (Class Roster).
+1. **Quản trị viên (System Administrator - `ROLE_ADMIN`):** Quản trị tài khoản, cấp phát vai trò người dùng, quản lý khoa/bộ môn, giám sát và truy vấn toàn diện nhật ký kiểm toán hệ thống (Audit Logs).
+2. **Cán bộ Đào tạo (Academic Staff - `ROLE_STAFF`):** Quản lý cơ cấu tổ chức khoa, danh mục môn học, cấu hình cây môn tiên quyết (DFS Anti-Cycle), thiết lập học kỳ và phòng học, mở lớp học phần, xếp lịch chi tiết, phân công giảng viên, thiết lập đợt mở cổng đăng ký, quản lý điểm và xem báo cáo tỷ lệ lấp đầy lớp.
+3. **Giảng viên (Lecturer - `ROLE_LECTURER`):** Tra cứu thông tin cá nhân, xem và xuất danh sách sinh viên chính thức theo từng lớp học phần phụ trách (Class Roster) để quản lý điểm danh.
+4. **Sinh viên (Student - `ROLE_STUDENT`):** Tra cứu chương trình học, tìm kiếm lớp mở theo thời gian thực; thực hiện giao dịch đăng ký/hủy học phần; xem thời khóa biểu tuần và tra cứu bảng điểm tích lũy cá nhân.
 
 ---
 
 ## 2. MA TRẬN TỔNG HỢP USE CASE TOÀN HỆ THỐNG (USE CASE MATRIX)
 
-Dưới đây là danh mục toàn bộ 19 Use Case, không bỏ sót bất kỳ chức năng nào:
-
-| Mã UC | Tên Use Case | Tác tử chính | Phân hệ (Module) | Độ ưu tiên | Ràng buộc nghiệp vụ / NFR |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **UC-01** | Đăng nhập hệ thống & Cấp phát JWT | Toàn bộ 4 Actors | Module 1 (Auth) | Critical | Mã hóa BCrypt, JWT Claims |
-| **UC-02** | Làm mới Access Token (Refresh Token) | Toàn bộ 4 Actors | Module 1 (Auth) | High | Token Rotation, Cookie HttpOnly |
-| **UC-03** | Tra cứu Hồ sơ Người dùng hiện hành (`me`) | Toàn bộ 4 Actors | Module 1 (Auth) | High | Auth Context Extraction |
-| **UC-04** | Quản trị Người dùng & Phân bổ Vai trò | Admin | Module 1 (Auth) | Medium | RBAC, User Status Invariant |
-| **UC-05** | Quản lý Khoa / Bộ môn (Department) | Staff, Admin | Module 2 (Curriculum) | Medium | Unique Code, Referential Integrity |
-| **UC-06** | Quản lý Danh mục Môn học (Course) | Staff | Module 2 (Curriculum) | High | Unique Course Code, Credit Bounds |
-| **UC-07** | Thiết lập Điều kiện Môn học Tiên quyết | Staff | Module 2 (Curriculum) | High | **BR-04**, Circular Dependency Check |
-| **UC-08** | Quản lý Học kỳ & Cơ sở vật chất Phòng học | Staff | Module 3 (Scheduling) | High | Temporal Sanity, Room Capacity |
-| **UC-09** | Mở Lớp học phần Mới & Gán Giảng viên | Staff | Module 3 (Scheduling) | Critical | **BR-02**, Teacher Availability |
-| **UC-10** | Cấu hình Lịch học chi tiết (Schedule Slots) | Staff | Module 3 (Scheduling) | Critical | **BR-03**, Room/Teacher Collision |
-| **UC-11** | Điều chỉnh Chỉ tiêu Sức chứa Lớp học phần | Staff | Module 3 (Scheduling) | High | **BR-02**, Capacity Invariant |
-| **UC-12** | Thiết lập Đợt mở cổng Đăng ký học phần | Staff | Module 4 (Engine) | Critical | **BR-01**, Window Overlap Validation |
-| **UC-13** | Tra cứu & Bộ lọc Lớp học phần mở | Student, Staff | Module 4 (Engine) | High | Search Indexing, Latency < 200ms |
-| **UC-14** | **Đăng ký Lớp học phần (Core Transaction)** | Student | Module 4 (Engine) | Critical | **BR-01, 02, 03, 04, 05, 06 (Locking)** |
-| **UC-15** | **Hủy Đăng ký Lớp học phần (Drop Section)** | Student | Module 4 (Engine) | Critical | **BR-01, BR-05**, Slot Recovery |
-| **UC-16** | Xem Thời khóa biểu & Môn đã đăng ký | Student | Module 4 (Engine) | High | Timetable View, Total Credits |
-| **UC-17** | Xem & Xuất Danh sách Sinh viên Lớp (Roster) | Lecturer | Module 5 (Reporting) | High | Lecturer Authorization Guard |
-| **UC-18** | Xem Dashboard Thống kê Tỷ lệ Lấp đầy | Staff | Module 5 (Reporting) | Medium | Aggregation Query, Underflow Alert |
-| **UC-19** | Tra cứu Nhật ký Kiểm toán Đăng ký (Audit) | Admin, Staff | Module 5 (Reporting) | Medium | Immutable Audit Trail, Filters |
+| Mã UC | Tên Use Case | Tác tử chính | Phân hệ (Module) | Độ ưu tiên | Ràng buộc / NFR / Bất biến liên quan | Màn hình Frontend tương ứng |
+| :--- | :--- | :--- | :--- | :---: | :--- | :--- |
+| **UC-01** | Đăng nhập Hệ thống & Cấp phát Token JWT | Toàn bộ 4 Actors | Module 1 (Auth) | Critical | BCrypt, HMAC-SHA256, UserStatus.ACTIVE | `LoginPage.jsx` (`/login`) |
+| **UC-02** | Làm mới Access Token (Token Refresh) | Toàn bộ 4 Actors | Module 1 (Auth) | High | Refresh Token Rotation, Client Interceptor | Axios Interceptor |
+| **UC-03** | Tra cứu Hồ sơ Người dùng Hiện hành (`/users/me`) | Toàn bộ 4 Actors | Module 1 (Auth) | High | Spring SecurityContext, Profile DTO | `Header.jsx`, `AppLayout.jsx` |
+| **UC-04** | Quản trị Người dùng & Phân bổ Vai trò | Admin, Staff | Module 1 (Auth) | High | RBAC, Unique Username/Email, Status Toggle | `UserManagementPage.jsx` (`/admin/users`) |
+| **UC-05** | Quản lý Khoa / Đơn vị Đào tạo (Department) | Staff, Admin | Module 2 (Curriculum) | Medium | Unique Code, Referential Integrity | `DepartmentsPage.jsx` (`/staff/departments`) |
+| **UC-06** | Quản lý Danh mục Môn học (Course) | Staff | Module 2 (Curriculum) | High | Unique Code, TotalCredits = Theory + Practical | `CoursesPage.jsx` (`/staff/courses`) |
+| **UC-07** | Thiết lập Điều kiện Môn Tiên quyết | Staff | Module 2 (Curriculum) | High | **BR-04**, Thuật toán DFS Chặn Chu trình Phụ thuộc | `CoursesPage.jsx` (Prereq Modal) |
+| **UC-08** | Quản lý Học kỳ & Cơ sở vật chất Phòng học | Staff | Module 3 (Scheduling) | High | Temporal Sanity ($Start < End$), Room Capacity | `InfrastructurePage.jsx` (`/staff/infrastructure`) |
+| **UC-09** | Mở Lớp Học phần Mới & Phân công Giảng viên | Staff | Module 3 (Scheduling) | Critical | Unique SectionCode in Semester, Capacity > 0 | `SectionsPage.jsx` (`/staff/sections`) |
+| **UC-10** | Cấu hình Lịch học Chi tiết (Schedule Slots) | Staff | Module 3 (Scheduling) | Critical | **BR-03, BR-09**, Xung đột Phòng/Giảng viên | `SectionsPage.jsx` (Slot Modal) |
+| **UC-11** | Điều chỉnh Chỉ tiêu Sức chứa & Hủy Lớp | Staff | Module 3 (Scheduling) | High | **BR-02, BR-09**, $C_{new} \ge N_{enrolled}$ | `SectionsPage.jsx` (Capacity Modal) |
+| **UC-12** | Quản lý Đợt Mở Cổng Đăng ký Học phần | Staff | Module 4 (Engine) | Critical | **BR-01**, Khung giờ $[T_{start}, T_{end}]$, Cohort | `PhasesPage.jsx` (`/staff/phases`) |
+| **UC-13** | Tra cứu & Lọc Danh mục Lớp Học phần Mở | Student, Staff | Module 4 (Engine) | High | Indexed Query, Available Slots, Latency < 200ms | `RegistrationStudioPage.jsx` (`/student/registration`) |
+| **UC-14** | **Đăng ký Lớp Học phần (Core Transaction)** | Student | Module 4 (Engine) | Critical | **BR-01 đến BR-06**, Khóa bi quan Row-Lock | `RegistrationStudioPage.jsx` |
+| **UC-15** | **Hủy Đăng ký Lớp Học phần (Drop Section)** | Student | Module 4 (Engine) | Critical | **BR-01, BR-05 (Min 12 TC)**, Thu hồi Slot | `RegistrationStudioPage.jsx` |
+| **UC-16** | Xem Thời khóa biểu Tuần & Môn Đã Đăng ký | Student | Module 4 (Engine) | High | Weekly Timetable Matrix (T2-CN, Tiết 1-12) | `TimetablePage.jsx` (`/student/timetable`) |
+| **UC-17** | Tra cứu & Xuất Danh sách Lớp (Class Roster) | Lecturer, Staff | Module 5 (Reporting) | High | Phân quyền Giảng viên phụ trách, In danh sách | `ClassRosterPage.jsx` (`/lecturer/roster`) |
+| **UC-18** | Dashboard Báo cáo Tỷ lệ Lấp đầy Lớp HP | Staff | Module 5 (Reporting) | Medium | Thống kê: Đầy 100%, Ổn định, Nguy cơ hủy | `OccupancyReportPage.jsx` (`/staff/occupancy-report`) |
+| **UC-19** | Tra cứu Nhật ký Kiểm toán Đăng ký (Audit Logs)| Admin, Staff | Module 5 (Reporting) | Medium | **BR-08**, Append-Only Log, Bộ lọc Đa tiêu chí | `AuditLogsPage.jsx` (`/admin/audit-logs`) |
+| **UC-20** | Quản lý Điểm & Tra cứu Bảng điểm Tích lũy | Student, Staff | Module 5 (Reporting) | High | Hỗ trợ Test Tiên quyết (Harness), Transcript | `StudentGradesPage.jsx`, `GradesPage.jsx` |
 
 ---
 
-## 3. ĐẶC TẢ CHI TIẾT ĐẦY ĐỦ TỪNG USE CASE (19/19 USE CASES)
+## 3. ĐẶC TẢ CHI TIẾT ĐẦY ĐỦ TỪNG USE CASE (20/20 USE CASES)
 
 ---
 
 ### PHÂN HỆ 1: ĐỊNH DANH, XÁC THỰC & QUẢN TRỊ NGƯỜI DÙNG (MODULE 1)
+*Package Backend:* `com.unienroll.modules.auth`  
+*Controllers:* `AuthController.java`, `AdminUserController.java`  
+*Services:* `AuthService.java`, `AdminUserService.java`  
+*Entities:* `User`, `StudentProfile`, `LecturerProfile`, `StaffProfile`
 
 #### UC-01: Đăng nhập Hệ thống & Cấp phát JWT (User Login)
-* **Tác tử:** Student, Lecturer, Academic Staff, Admin.
-* **Mô tả:** Tiếp nhận thông tin định danh (Username/Email & Password), xác thực mật khẩu qua BCrypt, phát hành cặp token JWT (Access Token ngắn hạn và Refresh Token dài hạn).
-* **Tiền điều kiện:** Tài khoản đã tồn tại trong DB và mang trạng thái `ACTIVE`.
+* **Tác tử:** Toàn bộ 4 Actors (Student, Lecturer, Academic Staff, Admin).
+* **Mô tả:** Tiếp nhận thông tin định danh (Username/Password), xác thực mật khẩu qua BCrypt, cấp phát cặp token JWT (Access Token & Refresh Token) và trả về thông tin profile định danh.
+* **Tiền điều kiện:** Tài khoản đã tồn tại trong CSDL và mang trạng thái `status = UserStatus.ACTIVE`.
+* **API Endpoint:** `POST /api/v1/auth/login` (Public)
+* **Request DTO (`LoginRequest`):** `{ "username": "...", "password": "..." }`
+* **Response DTO (`ApiResponse<LoginResponse>`):** Chứa `accessToken`, `refreshToken`, `tokenType: "Bearer"`, `userProfile` (id, username, email, fullName, role, specificCode).
 * **Luồng sự kiện chính:**
-  1. Người dùng nhập `username` và `password` tại màn hình đăng nhập, nhấn "Đăng nhập".
+  1. Người dùng nhập tên đăng nhập và mật khẩu tại giao diện `LoginPage.jsx`, nhấn "Đăng nhập".
   2. Frontend gửi request `POST /api/v1/auth/login`.
-  3. Backend truy vấn bảng `users` theo username; kiểm tra mã băm mật khẩu bằng `BCryptPasswordEncoder.matches()`.
-  4. Hệ thống kiểm tra trường `status == UserStatus.ACTIVE`.
-  5. Hệ thống sinh Access Token (HMAC-SHA256, hạn 15 phút, chứa claims: `userId`, `role`, `status`) và Refresh Token (hạn 7 ngày).
-  6. Backend trả về `ApiResponse` mang token và thông tin profile cơ bản.
-  7. Client lưu Access Token vào App Memory và Refresh Token vào Secure Storage / Cookie.
+  3. `AuthService` tìm kiếm `User` theo username qua `UserRepository`.
+  4. Kiểm tra mật khẩu bằng `BCryptPasswordEncoder.matches(rawPassword, encodedPassword)`.
+  5. Kiểm tra trạng thái tài khoản `user.getStatus() == UserStatus.ACTIVE`.
+  6. Sinh Access Token (hạn 15 phút, HMAC-SHA256, claim: userId, username, role) và Refresh Token (hạn 7 ngày).
+  7. Truy vấn hồ sơ mở rộng (`StudentProfile`, `LecturerProfile`, hoặc `StaffProfile`) để trả về thông tin định danh đầy đủ.
+  8. Trả về HTTP 200 OK kèm `LoginResponse`.
+  9. Frontend lưu Access Token vào `localStorage` và `AuthContext`, tự động chuyển hướng theo vai trò (Student $\rightarrow$ `/student/registration`, Staff $\rightarrow$ `/staff/sections`, Lecturer $\rightarrow$ `/lecturer/roster`, Admin $\rightarrow$ `/admin/users`).
 * **Luồng ngoại lệ:**
-  * **E01.1 - Sai tên đăng nhập hoặc mật khẩu:** Trả về HTTP 401 Unauthorized kèm mã lỗi `ERR_AUTH_INVALID_CREDENTIALS`.
-  * **E01.2 - Tài khoản bị vô hiệu hóa / khóa:** Trạng thái là `INACTIVE` hoặc `LOCKED`. Trả về HTTP 403 Forbidden kèm mã lỗi `ERR_AUTH_ACCOUNT_LOCKED`.
-* **Hậu điều kiện:** Phiên đăng nhập được thiết lập, các request tiếp theo được gán Header `Authorization: Bearer <token>`.
+  * **E01.1 - Sai username hoặc mật khẩu:** Trả về HTTP 401 Unauthorized kèm mã lỗi `ERR_AUTH_INVALID_CREDENTIALS`.
+  * **E01.2 - Tài khoản bị khóa hoặc vô hiệu hóa:** Trả về HTTP 403 Forbidden kèm mã lỗi `ERR_AUTH_ACCOUNT_LOCKED`.
 
 ---
 
 #### UC-02: Làm mới Access Token (Token Refresh)
-* **Tác tử:** Toàn bộ 4 Actors (gọi tự động từ Client Interceptor).
-* **Mô tả:** Khi Access Token hết hạn trong lúc người dùng đang thao tác, Client tự động gửi Refresh Token để lấy một Access Token mới mà không làm gián đoạn trải nghiệm người dùng.
-* **Tiền điều kiện:** Người dùng đã đăng nhập trước đó và sở hữu Refresh Token hợp lệ.
+* **Tác tử:** Toàn bộ 4 Actors (gọi tự động bởi Axios Client Interceptor).
+* **Mô tả:** Khi Access Token hết hạn (401), Client tự động dùng Refresh Token gửi yêu cầu cấp mới Access Token mà không làm gián đoạn phiên làm việc.
+* **Tiền điều kiện:** Người dùng có Refresh Token hợp lệ còn thời hạn.
+* **API Endpoint:** `POST /api/v1/auth/refresh` (Public)
+* **Request DTO (`RefreshTokenRequest`):** `{ "refreshToken": "..." }`
+* **Response DTO (`ApiResponse<RefreshTokenResponse>`):** `{ "accessToken": "...", "tokenType": "Bearer" }`
 * **Luồng sự kiện chính:**
-  1. Axios Interceptor tại Frontend bắt mã lỗi HTTP 401 khi gọi API thông thường.
-  2. Frontend gọi `POST /api/v1/auth/refresh` gửi kèm Refresh Token.
-  3. Backend giải mã token, kiểm tra tính toàn vẹn chữ ký và thời hạn còn hiệu lực.
-  4. Backend kiểm tra tài khoản tương ứng vẫn ở trạng thái `ACTIVE`.
-  5. Backend sinh Access Token mới (hạn 15 phút).
-  6. Trả về `ApiResponse` chứa Access Token mới.
-  7. Client cập nhật Access Token trong bộ nhớ và tự động gửi lại request ban đầu bị lỗi 401.
+  1. `axiosClient` interceptor bắt lỗi HTTP 401 khi gọi API được bảo vệ.
+  2. Interceptor gửi request `POST /api/v1/auth/refresh` kèm Refresh Token.
+  3. `JwtTokenProvider` xác thực chữ ký số và tính hợp lệ của token.
+  4. Trích xuất username, kiểm tra tài khoản vẫn tồn tại và `status == ACTIVE`.
+  5. Sinh Access Token mới (hạn 15 phút).
+  6. Trả về HTTP 200 OK.
+  7. Client cập nhật Access Token trong bộ nhớ và tự động gửi lại request ban đầu.
 * **Luồng ngoại lệ:**
-  * **E02.1 - Refresh Token hết hạn hoặc không hợp lệ:** Trả về HTTP 401 `ERR_AUTH_REFRESH_TOKEN_EXPIRED`. Client hủy toàn bộ phiên và điều hướng về trang Login.
+  * **E02.1 - Refresh Token hết hạn hoặc không hợp lệ:** Trả về HTTP 401 `ERR_AUTH_REFRESH_TOKEN_EXPIRED`. Client xóa token và điều hướng về `/login`.
 
 ---
 
 #### UC-03: Tra cứu Thông tin Tài khoản Hiện hành (Get Current User Profile)
 * **Tác tử:** Toàn bộ 4 Actors.
-* **Mô tả:** Lấy thông tin chi tiết của người dùng đang đăng nhập dựa trên token gửi kèm trong Header.
-* **Tiền điều kiện:** Request có gắn kèm Bearer JWT hợp lệ.
+* **Mô tả:** Lấy thông tin chi tiết của người dùng đang đăng nhập dựa trên token JWT trong Header.
+* **Tiền điều kiện:** Request có gắn Header `Authorization: Bearer <token>` hợp lệ.
+* **API Endpoint:** `GET /api/v1/users/me` (`isAuthenticated()`)
+* **Response DTO (`ApiResponse<UserProfileResponse>`):** Gồm `id`, `username`, `email`, `role`, `fullName`, `specificCode`, `phone`, `additionalInfo` (major, cohort, departmentName, degree...).
 * **Luồng sự kiện chính:**
-  1. Frontend gửi request `GET /api/v1/users/me`.
-  2. `JwtAuthenticationFilter` giải mã token, trích xuất `userId` và đặt vào `SecurityContextHolder`.
-  3. Controller/Service đọc `userId` từ Context, truy vấn bảng `users` cùng bảng Profile tương ứng (`StudentProfile`, `LecturerProfile`, hoặc `StaffProfile`).
-  4. Hệ thống đóng gói dữ liệu profile (Mã sinh viên/giảng viên, họ tên, email, khoa, niên khóa, số điện thoại) vào `ApiResponse`.
-  5. Trả về HTTP 200 OK.
+  1. Frontend gọi `GET /api/v1/users/me`.
+  2. `JwtAuthenticationFilter` giải mã token và đặt `CustomUserDetails` vào `SecurityContextHolder`.
+  3. Controller lấy `CustomUserDetails`, nạp thông tin user và profile tương ứng từ DB.
+  4. Trả về HTTP 200 OK kèm thông tin cá nhân.
 * **Luồng ngoại lệ:**
-  * **E03.1 - Token giả mạo hoặc không tìm thấy User ID:** Trả về HTTP 401 `ERR_AUTH_UNAUTHORIZED`.
+  * **E03.1 - Token không hợp lệ:** Trả về HTTP 401 `ERR_AUTH_UNAUTHORIZED`.
 
 ---
 
-#### UC-04: Quản lý Người dùng & Phân quyền (Admin User Management)
-* **Tác tử:** System Administrator (`ROLE_ADMIN`).
-* **Mô tả:** Admin khởi tạo tài khoản mới cho sinh viên/giảng viên/nhân viên, cấp phát vai trò (`Role`), khóa hoặc kích hoạt lại tài khoản, và đặt lại mật khẩu.
-* **Tiền điều kiện:** Người dùng thực hiện có vai trò `ROLE_ADMIN`.
+#### UC-04: Quản trị Người dùng & Phân bổ Vai trò (User Management)
+* **Tác tử:** System Administrator (`ROLE_ADMIN`), Cán bộ Đào tạo (`ROLE_STAFF` được quyền xem).
+* **Mô tả:** Admin khởi tạo tài khoản mới cho các đối tượng, gán vai trò (`ROLE_STUDENT`, `ROLE_LECTURER`, `ROLE_STAFF`, `ROLE_ADMIN`), khởi tạo hồ sơ profile chi tiết, khóa hoặc mở khóa tài khoản.
+* **Tiền điều kiện:** Người dùng thực hiện có vai trò phù hợp theo quy định bảo mật.
+* **API Endpoints:**
+  * `POST /api/v1/admin/users` (`hasRole('ADMIN')`): Tạo tài khoản mới kèm hồ sơ profile.
+  * `GET /api/v1/admin/users` (`hasAnyRole('ADMIN', 'STAFF')`): Xem danh sách người dùng toàn hệ thống.
+  * `PUT /api/v1/admin/users/{id}/status` (`hasRole('ADMIN')`): Cập nhật trạng thái người dùng (`ACTIVE`, `LOCKED`, `INACTIVE`).
+* **Request DTO (`CreateUserRequest`):** Gồm `username`, `password`, `email`, `role`, `fullName`, `phone`, và các trường theo vai trò: `studentCode`, `cohort`, `major` (nếu là Sinh viên); `lecturerCode`, `departmentId`, `degree` (nếu là Giảng viên); `staffCode`, `departmentName` (nếu là Cán bộ Đào tạo).
 * **Luồng sự kiện chính:**
-  1. Admin gửi `POST /api/v1/admin/users` kèm: `username`, `email`, `role`, `temporaryPassword`, và thông tin Profile chi tiết.
-  2. Hệ thống kiểm tra xem `username` hoặc `email` đã tồn tại trong DB chưa.
-  3. Mở Transaction:
-     - Băm mật khẩu bằng BCrypt.
-     - Tạo bản ghi trong bảng `users` với role được chọn.
-     - Khởi tạo Profile tương ứng (`student_profiles`, `lecturer_profiles`, hoặc `staff_profiles`).
-  4. Commit Transaction và trả về thông tin User mới với mã HTTP 201 Created.
+  1. Admin điền biểu mẫu tạo tài khoản trên `UserManagementPage.jsx`, nhấn "Lưu Tài Khoản".
+  2. Hệ thống kiểm tra: `username` và `email` không được trùng lặp trong bảng `users`.
+  3. Mở transaction: Băm mật khẩu bằng BCrypt, lưu bản ghi vào `users`, tạo bản ghi profile tương ứng (`student_profiles`, `lecturer_profiles`, hoặc `staff_profiles`).
+  4. Trả về HTTP 201 Created.
+  5. Khi Admin bấm nút "Khóa/Kích hoạt": Backend cập nhật `user.status` và trả về kết quả cập nhật (HTTP 200).
 * **Luồng ngoại lệ:**
   * **E04.1 - Trùng Username hoặc Email:** Trả về HTTP 409 Conflict `ERR_USER_ALREADY_EXISTS`.
-  * **E04.2 - Vai trò (Role) không tồn tại:** Trả về HTTP 400 Bad Request `ERR_INVALID_ROLE`.
+  * **E04.2 - Vai trò không hợp lệ:** Trả về HTTP 400 Bad Request `ERR_INVALID_ROLE`.
 
 ---
 
 ### PHÂN HỆ 2: CHƯƠNG TRÌNH ĐÀO TẠO & MÔN HỌC (MODULE 2)
+*Package Backend:* `com.unienroll.modules.curriculum`  
+*Controllers:* `DepartmentController.java`, `CourseController.java`  
+*Services:* `DepartmentService.java`, `CourseService.java`, `PrerequisiteService.java`  
+*Entities:* `Department`, `Course`, `PrerequisiteCondition`
 
 #### UC-05: Quản lý Khoa / Bộ môn (Department Management)
-* **Tác tử:** Academic Staff, Admin.
-* **Mô tả:** Quản lý danh sách các Khoa/Bộ môn trong trường (ví dụ: Khoa Công nghệ Thông tin, Khoa Kinh tế).
-* **Tiền điều kiện:** Người dùng có quyền `ROLE_STAFF` hoặc `ROLE_ADMIN`.
-* **Luồng sự kiện chính:**
-  1. Staff gửi request `POST /api/v1/admin/departments` kèm: `code` (ví dụ: `IT`), `name` (Khoa CNTT), `description`.
-  2. Hệ thống kiểm tra mã khoa `code` không được trùng lặp.
-  3. Lưu bản ghi vào bảng `departments`.
-  4. Trả về `ApiResponse` chứa thông tin khoa vừa tạo (HTTP 201).
+* **Tác tử:** Academic Staff (`ROLE_STAFF`), Admin (`ROLE_ADMIN`).
+* **Mô tả:** Khởi tạo, cập nhật, xem danh sách và xóa các Khoa/Bộ môn trong cơ cấu tổ chức đào tạo của trường.
+* **API Endpoints:**
+  * `POST /api/v1/admin/departments` (`hasAnyRole('ADMIN', 'STAFF')`): Tạo khoa mới (hỗ trợ alias: `/api/v1/curriculum/departments`, `/api/v1/academic/departments`).
+  * `GET /api/v1/admin/departments` (`isAuthenticated()`): Lấy toàn bộ danh sách khoa.
+  * `GET /api/v1/admin/departments/{id}` (`isAuthenticated()`): Xem chi tiết khoa.
+  * `PUT /api/v1/admin/departments/{id}` (`hasAnyRole('ADMIN', 'STAFF')`): Cập nhật thông tin khoa.
+  * `DELETE /api/v1/admin/departments/{id}` (`hasAnyRole('ADMIN', 'STAFF')`): Xóa khoa.
+* **Request DTO (`DepartmentRequest`):** `{ "code": "IT", "name": "Khoa Công nghệ Thông tin", "description": "..." }`
+* **Quy tắc kiểm tra:** Mã khoa `code` là duy nhất toàn hệ thống. Không được xóa khoa nếu đang có môn học liên kết.
 * **Luồng ngoại lệ:**
-  * **E05.1 - Trùng mã khoa:** Trả về HTTP 409 `ERR_DEPARTMENT_CODE_DUPLICATE`.
-  * **E05.2 - Xóa khoa đang có môn học liên kết:** Trả về HTTP 400 `ERR_DEPARTMENT_HAS_COURSES`.
+  * **E05.1 - Trùng mã khoa:** Trả về HTTP 409 Conflict `ERR_DEPARTMENT_CODE_DUPLICATE`.
+  * **E05.2 - Xóa khoa đang có ràng buộc dữ liệu:** Trả về HTTP 400 Bad Request kèm chi tiết ràng buộc.
 
 ---
 
 #### UC-06: Quản lý Danh mục Môn học (Course Management)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Định nghĩa thông tin môn học trong chương trình đào tạo: Mã môn học, tên môn, số tín chỉ lý thuyết, số tín chỉ thực hành, tổng số tín chỉ, khoa trực thuộc.
-* **Tiền điều kiện:** Khoa (`Department`) quản lý môn học đã tồn tại.
-* **Luồng sự kiện chính:**
-  1. Staff nhập biểu mẫu thông tin môn học, gửi `POST /api/v1/courses`.
-  2. Hệ thống kiểm tra:
-     - Mã môn học (`course_code`) là duy nhất trong toàn hệ thống.
-     - Số tín chỉ lý thuyết và thực hành $\ge 0$, tổng số tín chỉ $> 0$.
-  3. Lưu môn học vào bảng `courses`.
-  4. Trả về HTTP 201 Created kèm dữ liệu môn học.
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Định nghĩa thông tin môn học trong chương trình đào tạo: Mã môn học, tên môn, số tín chỉ lý thuyết, số tín chỉ thực hành, tổng số tín chỉ, khoa phụ trách và mô tả tóm tắt.
+* **API Endpoints:**
+  * `POST /api/v1/courses` (`hasRole('STAFF')`): Thêm môn học mới (hỗ trợ alias: `/api/v1/curriculum/courses`, `/api/v1/academic/courses`).
+  * `GET /api/v1/courses` (`isAuthenticated()`): Lấy danh sách toàn bộ môn học.
+  * `GET /api/v1/courses/{id}` (`isAuthenticated()`): Xem chi tiết môn học.
+  * `GET /api/v1/courses/department/{departmentId}` (`isAuthenticated()`): Lấy danh sách môn theo khoa.
+  * `PUT /api/v1/courses/{id}` (`hasRole('STAFF')`): Sửa thông tin môn học.
+  * `DELETE /api/v1/courses/{id}` (`hasRole('STAFF')`): Xóa môn học.
+* **Request DTO (`CourseRequest`):** `{ "code": "CS101", "name": "Lập trình Cơ bản", "theoryCredits": 3, "practicalCredits": 0, "departmentId": 1, "description": "..." }`
+* **Quy tắc kiểm tra:**
+  * Mã môn học `code` là duy nhất toàn trường.
+  * Tổng tín chỉ: $TotalCredits = TheoryCredits + PracticalCredits > 0$.
+  * Không thể xóa môn học nếu đã phát sinh lớp học phần liên quan hoặc đã có bản ghi điểm sinh viên.
 * **Luồng ngoại lệ:**
-  * **E06.1 - Trùng mã môn học:** Trả về HTTP 409 `ERR_COURSE_CODE_DUPLICATE`.
-  * **E06.2 - Số tín chỉ không hợp lệ:** Trả về HTTP 400 `ERR_INVALID_CREDIT_VALUE`.
+  * **E06.1 - Trùng mã môn học:** Trả về HTTP 409 Conflict `ERR_COURSE_CODE_DUPLICATE`.
+  * **E06.2 - Số tín chỉ không hợp lệ ($\le 0$):** Trả về HTTP 400 Bad Request `ERR_VALIDATION_FAILED`.
 
 ---
 
 #### UC-07: Thiết lập Điều kiện Môn học Tiên quyết (Prerequisite Conditions Setup)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Thiết lập quy định: Để sinh viên có thể đăng ký môn học $C$, sinh viên bắt buộc phải hoàn thành và đạt điểm đậu (`PASSED`) ở môn $P$ trước đó (**BR-04**).
-* **Tiền điều kiện:** Cả 2 môn học $C$ và $P$ đều đã được định nghĩa trên hệ thống.
-* **Luồng sự kiện chính:**
-  1. Staff chọn môn mục tiêu $C$, gửi request `POST /api/v1/courses/{id}/prerequisites` kèm danh sách ID các môn tiên quyết $\{P_1, P_2, ...\}$.
-  2. Hệ thống kiểm tra:
-     - Môn $P_i$ không được là chính môn $C$ ($P_i \neq C$).
-     - Thuật toán DFS/Tarjan kiểm tra không tạo ra phụ thuộc vòng (Circular Dependency: $A \rightarrow B \rightarrow C \rightarrow A$).
-  3. Lưu các bản ghi vào bảng `prerequisite_conditions`.
-  4. Trả về danh sách điều kiện tiên quyết đã cập nhật (HTTP 200).
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Thiết lập quy định: Để sinh viên có thể đăng ký môn học $C$ (Target Course), sinh viên bắt buộc phải hoàn thành và đạt (`PASSED`) ở môn $P$ (Prerequisite Course) trước đó (**BR-04**). Hệ thống tự động áp dụng thuật toán DFS Graph Traversal để chặn đứng mọi chu trình lặp phụ thuộc vòng tròn.
+* **API Endpoints:**
+  * `POST /api/v1/courses/{id}/prerequisites` (`hasRole('STAFF')`): Gán danh sách môn tiên quyết cho môn `{id}`.
+  * `GET /api/v1/courses/{id}/prerequisites` (`isAuthenticated()`): Lấy danh sách môn tiên quyết của môn `{id}`.
+  * `DELETE /api/v1/courses/{id}/prerequisites/{prerequisiteCourseId}` (`hasRole('STAFF')`): Xóa quan hệ tiên quyết.
+* **Request Body:** `List<Long>` (Danh sách ID các môn học tiên quyết).
+* **Thuật toán & Cơ chế Thẩm định (DFS Anti-Cycle Algorithm):**
+  1. Kiểm tra tự tham chiếu: Nếu $P = C$, từ chối với lỗi tự làm tiên quyết cho chính mình.
+  2. Kiểm tra đường đi có hướng: Gọi hàm `isReachable(prereqId, targetCourseId)`.
+  3. Dùng Queue và Set Visited duyệt theo chiều sâu/rộng đồ thị phụ thuộc tiên quyết hiện có.
+  4. Nếu tồn tại đường đi từ $P$ tới $C$, việc thêm cung $C \rightarrow P$ sẽ tạo thành chu trình có hướng khép kín $C \rightarrow P \rightarrow ... \rightarrow C$. Hệ thống từ chối ngay lập tức.
 * **Luồng ngoại lệ:**
-  * **E07.1 - Phát hiện phụ thuộc vòng:** Trả về HTTP 400 `ERR_CIRCULAR_PREREQUISITE_DETECTED`.
+  * **E07.1 - Phát hiện chu trình lặp phụ thuộc:** Trả về HTTP 400 Bad Request `ERR_CIRCULAR_PREREQUISITE_DETECTED`.
 
 ---
 
 ### PHÂN HỆ 3: LỚP HỌC PHẦN, PHÒNG HỌC & LỊCH HỌC (MODULE 3)
+*Package Backend:* `com.unienroll.modules.scheduling`  
+*Controllers:* `AcademicSemesterController.java`, `AcademicRoomController.java`, `AcademicSectionController.java`  
+*Services:* `SemesterService.java`, `RoomService.java`, `CourseSectionService.java`  
+*Entities:* `Semester`, `Room`, `CourseSection`, `ScheduleSlot`
 
 #### UC-08: Quản lý Học kỳ & Cơ sở vật chất Phòng học (Semester & Room Management)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Khởi tạo thông tin Học kỳ (Tên học kỳ, ngày bắt đầu, ngày kết thúc) và Quản lý danh mục Phòng học (Tên phòng, tòa nhà, sức chứa tối đa của phòng).
-* **Tiền điều kiện:** Người dùng có quyền `ROLE_STAFF`.
-* **Luồng sự kiện chính:**
-  1. Staff gửi `POST /api/v1/academic/semesters` (VD: Học kỳ 1 năm học 2026-2027) kèm ngày bắt đầu và kết thúc ($Start < End$).
-  2. Staff gửi `POST /api/v1/academic/rooms` kèm: `roomNumber` (A101), `building` (Tòa A), `capacity` (60 chỗ).
-  3. Hệ thống kiểm tra tính duy nhất của mã phòng trong cùng tòa nhà.
-  4. Lưu dữ liệu và trả về HTTP 201 Created.
-* **Luồng ngoại lệ:**
-  * **E08.1 - Ngày bắt đầu học kỳ sau ngày kết thúc:** Trả về HTTP 400 `ERR_INVALID_SEMESTER_DATES`.
-  * **E08.2 - Trùng tên phòng học trong tòa nhà:** Trả về HTTP 409 `ERR_ROOM_DUPLICATE`.
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Khởi tạo thông tin Học kỳ (Mã kỳ, tên kỳ, ngày bắt đầu, ngày kết thúc, trạng thái `UPCOMING`, `ACTIVE`, `COMPLETED`, `CLOSED`) và Quản lý danh mục Phòng học (Tòa nhà, số phòng, sức chứa chỗ ngồi).
+* **API Endpoints Học kỳ (`AcademicSemesterController`):**
+  * `POST /api/v1/academic/semesters` (`hasRole('STAFF')`): Tạo học kỳ mới.
+  * `GET /api/v1/academic/semesters` (`isAuthenticated()`): Lấy danh sách toàn bộ học kỳ.
+  * `GET /api/v1/academic/semesters/active` (`isAuthenticated()`): Lấy học kỳ đang kích hoạt hoạt động.
+  * `GET /api/v1/academic/semesters/{id}` (`isAuthenticated()`): Lấy chi tiết học kỳ.
+  * `PUT /api/v1/academic/semesters/{id}` (`hasRole('STAFF')`): Sửa thông tin học kỳ.
+  * `PATCH /api/v1/academic/semesters/{id}/status` (`hasRole('STAFF')`): Đổi trạng thái học kỳ.
+  * `DELETE /api/v1/academic/semesters/{id}` (`hasRole('STAFF')`): Xóa học kỳ.
+* **API Endpoints Phòng học (`AcademicRoomController`):**
+  * `POST /api/v1/academic/rooms` (`hasRole('STAFF')`): Tạo phòng học mới.
+  * `GET /api/v1/academic/rooms` (`isAuthenticated()`): Lấy danh sách phòng học.
+  * `GET /api/v1/academic/rooms/{id}` (`isAuthenticated()`): Xem chi tiết phòng học.
+  * `PUT /api/v1/academic/rooms/{id}` (`hasRole('STAFF')`): Cập nhật phòng học.
+  * `DELETE /api/v1/academic/rooms/{id}` (`hasRole('STAFF')`): Xóa phòng học.
+* **Quy tắc thẩm định:** Ngày bắt đầu học kỳ phải trước ngày kết thúc ($StartDate < EndDate$); Sức chứa phòng học $Capacity > 0$.
 
 ---
 
-#### UC-09: Mở Lớp Học phần Mới & Gán Giảng viên (Open Course Section)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Tạo một lớp học phần cụ thể cho môn học trong học kỳ, gán giảng viên chịu trách nhiệm giảng dạy và thiết lập chỉ tiêu sức chứa ban đầu ($C_{max}$).
-* **Tiền điều kiện:** Môn học, Học kỳ và Giảng viên phải tồn tại trên hệ thống.
-* **Luồng sự kiện chính:**
-  1. Staff gửi request `POST /api/v1/academic/sections` kèm: `courseId`, `semesterId`, `sectionCode` (ví dụ: `CS101.N01`), `capacity` ($C_{max}$), `lecturerId`.
-  2. Hệ thống kiểm tra:
-     - Mã lớp học phần là duy nhất trong học kỳ đó.
-     - Sức chứa $C_{max} > 0$.
-  3. Khởi tạo bản ghi `course_sections` với $N_{enrolled} = 0$, `status = 'OPEN'`.
-  4. Trả về thông tin lớp học phần vừa mở (HTTP 201).
+#### UC-09: Mở Lớp Học phần Mới & Phân công Giảng viên (Open Course Section)
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Tạo một lớp học phần cụ thể cho môn học trong học kỳ chỉ định, gán giảng viên chịu trách nhiệm giảng dạy (tùy chọn lúc mở) và thiết lập chỉ tiêu sức chứa ban đầu ($C_{max}$).
+* **API Endpoints (`AcademicSectionController`):**
+  * `POST /api/v1/academic/sections` (`hasRole('STAFF')`): Mở lớp học phần mới.
+  * `GET /api/v1/academic/sections` (`isAuthenticated()`): Xem danh sách lớp học phần.
+  * `GET /api/v1/academic/sections/{id}` (`isAuthenticated()`): Chi tiết lớp học phần.
+  * `GET /api/v1/academic/sections/semester/{semesterId}` (`isAuthenticated()`): Danh sách lớp theo học kỳ.
+  * `PUT /api/v1/academic/sections/{id}` (`hasRole('STAFF')`): Cập nhật lớp học phần.
+  * `DELETE /api/v1/academic/sections/{id}` (`hasRole('STAFF')`): Xóa lớp học phần.
+* **Request DTO (`CourseSectionRequest`):** `{ "sectionCode": "CS101.N01", "courseId": 1, "semesterId": 1, "capacity": 40, "lecturerId": 2 }`
+* **Quy tắc thẩm định:**
+  * Mã lớp học phần `sectionCode` là duy nhất trong cùng một học kỳ.
+  * Chỉ tiêu sức chứa $Capacity > 0$.
+  * Bản ghi khởi tạo với `enrolledCount = 0` và `status = SectionStatus.OPEN`.
 * **Luồng ngoại lệ:**
-  * **E09.1 - Trùng mã lớp trong cùng kỳ:** Trả về HTTP 409 `ERR_SECTION_CODE_DUPLICATE`.
-  * **E09.2 - Sức chứa không hợp lệ:** Trả về HTTP 400 `ERR_INVALID_SECTION_CAPACITY`.
+  * **E09.1 - Trùng mã lớp trong cùng kỳ:** Trả về HTTP 409 Conflict `ERR_SECTION_CODE_DUPLICATE`.
+  * **E09.2 - Sức chứa không hợp lệ:** Trả về HTTP 400 Bad Request `ERR_INVALID_SECTION_CAPACITY`.
 
 ---
 
-#### UC-10: Cấu hình Lịch học Chi tiết (Schedule Slots Assignment)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Phân bổ các buổi học trong tuần cho lớp học phần: Thứ trong tuần, Tiết bắt đầu, Tiết kết thúc, Phòng học cụ thể.
-* **Tiền điều kiện:** Lớp học phần và Phòng học đã tồn tại. Sức chứa phòng học phải $\ge C_{max}$ của lớp học phần.
-* **Luồng sự kiện chính:**
-  1. Staff gửi `POST /api/v1/academic/sections/{id}/schedules` kèm danh sách các slot (Ví dụ: Thứ 2, Tiết 1-3, Phòng A101).
-  2. Hệ thống thẩm định 3 ràng buộc:
-     - **Xung đột phòng học:** Phòng A101 không được có lớp nào khác học cùng thứ và cùng khoảng tiết.
-     - **Xung đột giảng viên:** Giảng viên phụ trách không được có lịch dạy ở lớp khác trong cùng khung giờ.
-     - **Sức chứa:** Sức chứa phòng $\ge$ Sức chứa tối đa $C_{max}$ của lớp học phần.
-  3. Lưu các slot vào bảng `schedule_slots`.
-  4. Trả về danh sách lịch học của lớp (HTTP 200).
+#### UC-10: Cấu hình Lịch học Chi tiết & Thẩm định Xung đột (Schedule Slots Assignment)
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Phân bổ các buổi học trong tuần cho lớp học phần: Thứ trong tuần (`dayOfWeek`), Tiết bắt đầu (`startPeriod`), Tiết kết thúc (`endPeriod`), Phòng học (`roomId`). Hệ thống kiểm tra đồng thời xung đột phòng học, xung đột giảng viên và quy cách sức chứa.
+* **API Endpoints:**
+  * `POST /api/v1/academic/sections/{id}/schedules` (`hasRole('STAFF')`): Gán toàn bộ danh sách lịch học.
+  * `POST /api/v1/academic/sections/{id}/slots` (`hasRole('STAFF')`): Thêm 1 buổi học đơn lẻ vào lịch hiện tại.
+  * `DELETE /api/v1/academic/sections/{id}/slots/{slotId}` (`hasRole('STAFF')`): Xóa 1 buổi học khỏi lớp.
+* **Request DTO (`ScheduleSlotRequest`):** `{ "roomId": 1, "dayOfWeek": "MONDAY", "startPeriod": 1, "endPeriod": 3 }`
+* **Cơ chế Thẩm định 3 Bất biến:**
+  1. **Quy tắc BR-09 (Sức chứa phòng học):** $Capacity_{room} \ge Capacity_{section}$. Nếu phòng học nhỏ hơn chỉ tiêu của lớp, từ chối với `ERR_ROOM_CAPACITY_INSUFFICIENT`.
+  2. **Quy tắc BR-03 (Xung đột phòng học):** Phòng học không được có bất kỳ lớp nào khác học cùng thứ và có khoảng tiết giao thoa trong cùng học kỳ ($Start_A \le End_B \land Start_B \le End_A$). Nếu có, từ chối với `ERR_ROOM_SCHEDULE_COLLISION`.
+  3. **Quy tắc BR-03 (Xung đột giảng viên):** Nếu lớp đã phân công giảng viên, giảng viên đó không được có lịch dạy ở lớp khác trong cùng khung giờ. Nếu có, từ chối với `ERR_LECTURER_SCHEDULE_COLLISION`.
 * **Luồng ngoại lệ:**
-  * **E10.1 - Trùng lịch phòng học:** Trả về HTTP 409 `ERR_ROOM_SCHEDULE_COLLISION`.
-  * **E10.2 - Trùng lịch giảng viên:** Trả về HTTP 409 `ERR_LECTURER_SCHEDULE_COLLISION`.
-  * **E10.3 - Phòng học quá nhỏ so với lớp:** Trả về HTTP 400 `ERR_ROOM_CAPACITY_INSUFFICIENT`.
+  * **E10.1 - Phòng không đủ sức chứa:** Trả về HTTP 400 `ERR_ROOM_CAPACITY_INSUFFICIENT`.
+  * **E10.2 - Trùng lịch phòng học:** Trả về HTTP 409 `ERR_ROOM_SCHEDULE_COLLISION`.
+  * **E10.3 - Trùng lịch giảng viên:** Trả về HTTP 409 `ERR_LECTURER_SCHEDULE_COLLISION`.
 
 ---
 
-#### UC-11: Điều chỉnh Chỉ tiêu Sức chứa Lớp học phần (Adjust Section Capacity)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Thay đổi chỉ tiêu số lượng sinh viên tối đa ($C_{max}$) của một lớp học phần đã mở (**BR-02**).
-* **Tiền điều kiện:** Lớp học phần đang tồn tại.
-* **Luồng sự kiện chính:**
-  1. Staff gửi `PUT /api/v1/academic/sections/{id}/capacity` kèm giá trị mới `newCapacity`.
-  2. Hệ thống kiểm tra:
-     - `newCapacity` không được nhỏ hơn số sinh viên hiện tại đã đăng ký thành công ($N_{enrolled}$).
-     - `newCapacity` không vượt quá sức chứa tối đa của phòng học đã gán.
-  3. Mở transaction: Cập nhật $C_{max} = newCapacity$.
-  4. Tự động điều chỉnh trạng thái: Nếu $N_{enrolled} < newCapacity$ và lớp đang `CLOSED`, tự động mở lại thành `OPEN`.
-  5. Ghi vết kiểm toán `OVERRIDE_CAPACITY` vào Module 5.
-  6. Trả về thông tin lớp đã cập nhật (HTTP 200).
+#### UC-11: Điều chỉnh Sức chứa Lớp học phần & Hủy Lớp (Adjust Capacity & Cancel Section)
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Tăng hoặc giảm chỉ tiêu số lượng sinh viên tối đa ($C_{max}$) của lớp học phần đã mở, hoặc hủy lớp nếu không đủ điều kiện duy trì (**BR-02 & BR-09**).
+* **API Endpoints:**
+  * `PUT /api/v1/academic/sections/{id}/capacity` (`hasRole('STAFF')`): Đổi sức chứa mới (`UpdateCapacityRequest: { "newCapacity": 50 }`).
+  * `PUT /api/v1/academic/sections/{id}/cancel` (`hasRole('STAFF')`): Hủy lớp học phần (`status = CANCELLED`).
+* **Quy tắc Nghiệp vụ Bắt buộc (BR-02, BR-09):**
+  * Sức chứa mới $newCapacity$ không được phép nhỏ hơn số lượng sinh viên hiện đã ghi danh thành công: $newCapacity \ge N_{enrolled}$.
+  * Sức chứa mới không được vượt quá sức chứa tối đa của tất cả các phòng học đã bố trí cho lớp: $\forall slot, newCapacity \le slot.room.capacity$.
+  * Tự động chuyển trạng thái: Nếu lớp từng bị đóng (`CLOSED`) do đầy và nay được tăng sức chứa ($N_{enrolled} < newCapacity$), hệ thống tự động kích hoạt mở lại thành `OPEN`.
 * **Luồng ngoại lệ:**
   * **E11.1 - Hạ sức chứa thấp hơn số sinh viên đã đăng ký:** Trả về HTTP 400 `ERR_CAPACITY_LOWER_THAN_ENROLLED`.
-  * **E11.2 - Sức chứa mới vượt quá phòng học:** Trả về HTTP 400 `ERR_CAPACITY_EXCEEDS_ROOM_LIMIT`.
+  * **E11.2 - Sức chứa mới vượt quá phòng học:** Trả về HTTP 400 `ERR_ROOM_CAPACITY_INSUFFICIENT`.
 
 ---
 
 ### PHÂN HỆ 4: ĐỘNG CƠ ĐĂNG KÝ HỌC PHẦN (MODULE 4 - TRỌNG TÂM GIAO DỊCH)
+*Package Backend:* `com.unienroll.modules.engine`  
+*Controllers:* `AcademicPhaseController.java`, `SectionCatalogController.java`, `StudentRegistrationController.java`  
+*Services:* `RegistrationEngineService.java`, `RegistrationPhaseService.java`  
+*Entities:* `RegistrationPhase`, `EnrollmentRecord`
 
-#### UC-12: Thiết lập Đợt mở cổng Đăng ký (Registration Phase Management)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Thiết lập khung thời gian [$T_{start}, T_{end}$] cho phép sinh viên thực hiện đăng ký và rút môn trong học kỳ (**BR-01**).
-* **Tiền điều kiện:** Học kỳ đã được khởi tạo.
-* **Luồng sự kiện chính:**
-  1. Staff gửi `POST /api/v1/academic/registration-phases` kèm: `semesterId`, `phaseName` (Đợt 1, Đợt bổ sung), `startTime`, `endTime`, `cohort` (áp dụng cho K65, K66...).
-  2. Hệ thống kiểm tra $T_{start} < T_{end}$.
-  3. Lưu thông tin vào bảng `registration_phases`.
-  4. Trả về thông tin đợt đăng ký (HTTP 201).
-* **Luồng ngoại lệ:**
-  * **E12.1 - Thời gian bắt đầu sau thời gian kết thúc:** Trả về HTTP 400 `ERR_INVALID_PHASE_TIME_RANGE`.
-
----
-
-#### UC-13: Tra cứu & Lọc Danh mục Lớp học phần Mở (Search & Filter Sections)
-* **Tác tử:** Sinh viên, Cán bộ Đào tạo.
-* **Mô tả:** Tra cứu danh sách các lớp học phần đang mở trong học kỳ kèm thông tin số lượng slot còn lại, lịch học, giảng viên và phòng học.
-* **Tiền điều kiện:** Học kỳ đã có các lớp học phần được mở.
-* **Luồng sự kiện chính:**
-  1. Sinh viên nhập từ khóa tìm kiếm (Mã môn, Tên môn), chọn Khoa, tích chọn "Chỉ hiện lớp còn slot trống".
-  2. Frontend gửi request `GET /api/v1/sections?semesterId=...&keyword=...&openOnly=true`.
-  3. Backend thực thi câu lệnh SQL có chỉ mục tối ưu (B-Tree Index trên `course_code`, `status`), nạp kèm `schedule_slots`.
-  4. Trả về danh sách lớp kèm số slot trống khả dụng: $SlotsAvailable = C_{max} - N_{enrolled}$ (Độ trễ truy vấn < 200ms).
-* **Hậu điều kiện:** Dữ liệu hiển thị trực quan trên giao diện bảng danh mục học phần.
+#### UC-12: Quản lý Đợt Mở Cổng Đăng ký Học phần (Registration Phase Management)
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Thiết lập khung thời gian [$T_{start}, T_{end}$] cho phép sinh viên thực hiện đăng ký và rút môn trong học kỳ (**BR-01**). Có thể cấu hình áp dụng theo Khóa sinh viên (`cohort`) hoặc mở cho toàn trường.
+* **API Endpoints (`AcademicPhaseController`):**
+  * `POST /api/v1/academic/registration-phases` (`hasRole('STAFF')`): Tạo đợt đăng ký mới (hỗ trợ alias `/api/v1/academic/phases`).
+  * `GET /api/v1/academic/registration-phases` (`isAuthenticated()`): Xem danh sách đợt.
+  * `GET /api/v1/academic/registration-phases/semester/{semesterId}` (`isAuthenticated()`): Xem đợt theo học kỳ.
+  * `PUT /api/v1/academic/registration-phases/{id}` (`hasRole('STAFF')`): Cập nhật đợt đăng ký.
+  * `PUT /api/v1/academic/registration-phases/{id}/close` (`hasRole('STAFF')`): Đóng đợt đăng ký ngay lập tức.
+  * `DELETE /api/v1/academic/registration-phases/{id}` (`hasRole('STAFF')`): Xóa đợt đăng ký.
+* **Request DTO (`RegistrationPhaseRequest`):** `{ "semesterId": 1, "phaseName": "Đợt 1 - Khóa K65", "startTime": "...", "endTime": "...", "cohort": "K65" }`
+* **Quy tắc thẩm định:** $T_{start} < T_{end}$. Phương thức `isWithinActivePhase(semesterId, cohort, transTime)` kiểm tra thời điểm thực tế để cấp phép hoặc từ chối giao dịch của sinh viên.
 
 ---
 
-#### UC-14: ĐĂNG KÝ LỚP HỌC PHẦN (ENROLL COURSE SECTION) - CORE TRANSACTION
+#### UC-13: Tra cứu & Lọc Danh mục Lớp Học phần Mở (Search & Filter Open Sections)
+* **Tác tử:** Student, Academic Staff.
+* **Mô tả:** Tra cứu danh mục các lớp học phần đang mở trong học kỳ; hỗ trợ bộ lọc đa tiêu chí theo Từ khóa (Mã môn, Tên môn), Khoa phụ trách, và cờ "Chỉ hiện lớp còn slot trống".
+* **API Endpoints (`SectionCatalogController`):**
+  * `GET /api/v1/sections` (`isAuthenticated()`): Tìm kiếm và lọc danh mục lớp (hỗ trợ alias `/api/v1/catalog/sections`).
+  * `GET /api/v1/sections/{id}` (`isAuthenticated()`): Xem chi tiết một lớp học phần.
+* **Query Parameters:** `semesterId`, `keyword`, `departmentId`, `openOnly` (boolean).
+* **Kết quả trả về:** Danh sách `CourseSectionResponse` nạp kèm danh sách `ScheduleSlotResponse` chi tiết (Thứ, Tiết, Phòng, Giảng viên, Chỉ tiêu $C_{max}$, Sĩ số đã đăng ký $N_{enrolled}$, Số chỗ trống còn lại $AvailableSlots = \max(0, C_{max} - N_{enrolled})$, Trạng thái `OPEN`/`CLOSED`).
+
+---
+
+#### UC-14: ĐĂNG KÝ LỚP HỌC PHẦN (CORE TRANSACTION PIPELINE)
 * **Tác tử:** Sinh viên (`ROLE_STUDENT`).
-* **Mô tả:** Sinh viên đăng ký tham gia một lớp học phần. Hệ thống thẩm định tuần tự 6 Quy tắc Nghiệp vụ (BR-01 đến BR-06) và thực thi giao dịch có kiểm soát đồng thời (Pessimistic Lock) để chống overbooking.
-* **Tiền điều kiện:** Sinh viên có tài khoản `ACTIVE`; Lớp học phần đang tồn tại.
-* **Luồng sự kiện chính (Pipeline 6 bước tuần tự):**
-  1. Sinh viên nhấn "Đăng ký" tại dòng lớp học phần trên SPA.
-  2. Frontend gửi request `POST /api/v1/student/registrations` kèm `{ sectionId }`.
-  3. Tầng Service kích hoạt **Registration Pipeline**:
-     - **Bước 1 (BR-01 - Khung giờ):** Kiểm tra thời điểm hiện tại $T_{trans}$ có nằm trong [$T_{start}, T_{end}$] của đợt mở cổng dành cho khóa của sinh viên hay không. Nếu không, ném `ERR_REGISTRATION_WINDOW_CLOSED`.
-     - **Bước 2 (BR-04 - Môn tiên quyết):** Truy vấn cây môn tiên quyết của môn học; đối soát với `grade_records` của sinh viên. Nếu có môn tiên quyết chưa đạt trạng thái `PASSED`, ném `ERR_PREREQUISITE_NOT_FULFILLED`.
-     - **Bước 3 (BR-06 - Tính duy nhất / Trùng môn):** Kiểm tra sinh viên đã đăng ký lớp nào khác cùng môn học này trong kỳ chưa. Nếu có, ném `ERR_DUPLICATE_COURSE_REGISTRATION`.
-     - **Bước 4 (BR-03 - Trùng lịch học):** So khớp toàn bộ các `schedule_slots` của lớp mục tiêu với các lớp sinh viên đang theo học trong kỳ. Nếu trùng thứ và giao thoa tiết học, ném `ERR_TIMETABLE_COLLISION`.
-     - **Bước 5 (BR-05 - Hạn mức tín chỉ):** Tính $Credits_{hientai} + Credits_{lopmoi}$. Nếu vượt quá 24 tín chỉ (và không có cờ ghi đè đặc quyền), ném `ERR_CREDIT_LIMIT_EXCEEDED`.
-     - **Bước 6 (BR-02 - Kiểm tra Sức chứa & Khóa hàng bi quan):**
-       - Thực thi: `SELECT * FROM course_sections WHERE id = :id FOR UPDATE`.
-       - Đối soát: Nếu $N_{enrolled} \ge C_{max}$, ném `ERR_SECTION_CAPACITY_FULL`.
-  4. Thực thi Giao dịch Nguyên tử (Atomic DB Transaction):
-     - Tăng số lượng: $N_{enrolled} = N_{enrolled} + 1$. Nếu $N_{enrolled} = C_{max}$ thì gán `status = 'CLOSED'`.
-     - Chèn bản ghi vào bảng `enrollment_records` (`student_id`, `section_id`, `status='ENROLLED'`, `enrolled_at=NOW()`).
-  5. Commit Transaction và nhả khóa dòng.
-  6. Ghi vết kiểm toán bất đồng bộ (`action='ENROLL'`, `status='SUCCESS'`) vào bảng `registration_audit_logs`.
-  7. Trả về `ApiResponse` thành công (HTTP 200) chứa thông tin đăng ký.
-* **Luồng ngoại lệ (Các mã lỗi chuẩn tương ứng):**
-  * **E14.1 - Đóng cổng (BR-01):** HTTP 400 `ERR_REGISTRATION_WINDOW_CLOSED`.
-  * **E14.2 - Hết chỗ (BR-02):** HTTP 409 `ERR_SECTION_CAPACITY_FULL`.
-  * **E14.3 - Trùng lịch học (BR-03):** HTTP 409 `ERR_TIMETABLE_COLLISION` (kèm ID lớp bị trùng).
-  * **E14.4 - Thiếu môn tiên quyết (BR-04):** HTTP 400 `ERR_PREREQUISITE_NOT_FULFILLED` (kèm danh sách môn thiếu).
-  * **E14.5 - Quá hạn mức tín chỉ (BR-05):** HTTP 400 `ERR_CREDIT_LIMIT_EXCEEDED`.
-  * **E14.6 - Đã đăng ký môn này rồi (BR-06):** HTTP 409 `ERR_DUPLICATE_COURSE_REGISTRATION`.
-* **Hậu điều kiện:** Sinh viên chính thức có tên trong danh sách lớp; số slot khả dụng giảm đi 1.
+* **Mô tả:** Giao dịch ghi danh sinh viên vào lớp học phần. Hệ thống thẩm định tuần tự 6 Quy tắc Nghiệp vụ cốt lõi (**BR-01 đến BR-06**) theo triết lý Fail-Fast và kiểm soát tương tranh bằng Khóa bi quan (**Pessimistic Write Lock**) trên dòng lớp học phần.
+* **API Endpoints (`StudentRegistrationController`):**
+  * `POST /api/v1/student/registrations` (`hasRole('STUDENT')`): Đăng ký lớp học phần (hỗ trợ alias `POST /api/v1/student/registrations/enroll`, `/api/v1/registration`).
+* **Request DTO (`EnrollmentRequest`):** `{ "sectionId": 101 }`
+* **Response DTO (`ApiResponse<EnrollmentResponse>`):** Chứa thông tin đăng ký thành công (id, studentCode, sectionCode, courseCode, courseName, totalCredits, status: `ENROLLED`, enrolledAt).
+* **Luồng sự kiện chính (Pipeline 6 bước tuần tự tại `RegistrationEngineService`):**
+  1. Sinh viên nhấn nút "Đăng Ký" trên giao diện `RegistrationStudioPage.jsx`.
+  2. Nạp hồ sơ sinh viên `StudentProfile` và lớp học phần mục tiêu `CourseSection`.
+  3. **Bước 1 - Kiểm tra BR-01 (Khung giờ đăng ký):** Gọi `phaseService.isWithinActivePhase(semesterId, student.cohort, transTime)`. Nếu đóng cổng $\rightarrow$ Ghi log kiểm toán `FAILED` và ném `ERR_REGISTRATION_WINDOW_CLOSED`.
+  4. **Bước 2 - Kiểm tra BR-04 (Môn tiên quyết):** Gọi `gradeService.hasPassedAllPrerequisites(studentId, course.id)`. Nếu chưa đạt $\rightarrow$ Ghi log `FAILED` và ném `ERR_PREREQUISITE_NOT_FULFILLED` kèm danh sách môn còn thiếu trong trường `details`.
+  5. **Bước 3 - Kiểm tra BR-06 (Tính duy nhất / Trùng môn học trong kỳ):** Truy vấn `existsByStudentIdAndCourseIdAndSemesterIdAndStatus(..., ENROLLED)`. Nếu đã đăng ký môn này ở lớp khác $\rightarrow$ Ghi log `FAILED` và ném `ERR_DUPLICATE_COURSE_REGISTRATION`.
+  6. **Bước 4 - Kiểm tra BR-03 (Trùng lịch học - Schedule Collision):** Nạp toàn bộ các lớp đang học hợp lệ (`ENROLLED`) trong kỳ của sinh viên. So khớp từng `ScheduleSlot` của lớp mục tiêu với các lớp đã học. Nếu cùng Thứ và giao thoa tiết ($Start_A \le End_B \land Start_B \le End_A$) $\rightarrow$ Ghi log `FAILED` và ném `ERR_TIMETABLE_COLLISION` kèm mã lớp và khung giờ bị trùng.
+  7. **Bước 5 - Kiểm tra BR-05 (Hạn mức tín chỉ tối đa):** Tính $resultingCredits = currentCredits + newCourseCredits$. Nếu $resultingCredits > 24$ và không có cờ ghi đè đặc quyền (`isCreditLimitOverridden != true`) $\rightarrow$ Ghi log `FAILED` và ném `ERR_CREDIT_LIMIT_EXCEEDED`.
+  8. **Bước 6 - Kiểm tra BR-02 & Khóa bi quan (Pessimistic Row Lock):**
+     * Thực thi khóa hàng: `entityManager.refresh(targetSection, LockModeType.PESSIMISTIC_WRITE)`.
+     * Kiểm tra sức chứa: Nếu $enrolledCount \ge capacity$ $\rightarrow$ Cập nhật `status = CLOSED`, ghi log `FAILED` và ném `ERR_SECTION_CAPACITY_FULL`.
+  9. **Thực thi Giao dịch Nguyên tử (Atomic Commit):**
+     * Tăng sĩ số lớp: $enrolledCount = enrolledCount + 1$. Nếu chạm mốc chỉ tiêu thì gán `status = CLOSED`.
+     * Lưu bản ghi `EnrollmentRecord` (`status = ENROLLED`, `enrolledAt = transTime`).
+  10. **Phát sự kiện Kiểm toán (Audit Event):** Bắn `RegistrationAuditEvent` bất đồng bộ (`action = ENROLL`, `status = SUCCESS`).
+  11. Trả về HTTP 200 OK kèm thông tin đăng ký.
+* **Luồng ngoại lệ (Chuẩn hóa theo `ErrorCode.java`):**
+  * `ERR_REGISTRATION_WINDOW_CLOSED` (HTTP 400)
+  * `ERR_PREREQUISITE_NOT_FULFILLED` (HTTP 400)
+  * `ERR_DUPLICATE_COURSE_REGISTRATION` (HTTP 409)
+  * `ERR_TIMETABLE_COLLISION` (HTTP 409)
+  * `ERR_CREDIT_LIMIT_EXCEEDED` (HTTP 400)
+  * `ERR_SECTION_CAPACITY_FULL` (HTTP 409)
 
 ---
 
 #### UC-15: HỦY ĐĂNG KÝ LỚP HỌC PHẦN (DROP COURSE SECTION)
 * **Tác tử:** Sinh viên (`ROLE_STUDENT`).
-* **Mô tả:** Sinh viên rút tên khỏi lớp học phần đã đăng ký trong kỳ. Hệ thống hoàn lại 1 slot trống cho lớp học phần.
-* **Tiền điều kiện:**
-  - Thời điểm hiện tại nằm trong khung thời gian hợp lệ (**BR-01**).
-  - Bản ghi đăng ký của sinh viên tồn tại với trạng thái `ENROLLED`.
+* **Mô tả:** Sinh viên rút tên khỏi một lớp học phần đã đăng ký trong kỳ. Hệ thống thu hồi slot trống, mở lại trạng thái `OPEN` nếu lớp từng bị đóng, đồng thời kiểm tra ngưỡng tối thiểu 12 tín chỉ (**BR-01 & BR-05**).
+* **API Endpoints (`StudentRegistrationController`):**
+  * `DELETE /api/v1/student/registrations/{sectionId}` (`hasRole('STUDENT')`): Hủy đăng ký (hỗ trợ alias `POST /api/v1/student/registrations/drop`).
 * **Luồng sự kiện chính:**
-  1. Sinh viên nhấn "Hủy môn" tại danh sách lớp đã đăng ký.
-  2. Frontend gửi request `DELETE /api/v1/student/registrations/{sectionId}`.
-  3. Hệ thống kiểm tra thời gian theo **BR-01**. Nếu hết hạn hủy, từ chối với `ERR_REGISTRATION_WINDOW_CLOSED`.
-  4. Hệ thống kiểm tra hạn mức tín chỉ tối thiểu theo **BR-05**:
-     - Tính: $Credits_{conlai} = Credits_{hientai} - Credits_{lophuy}$.
-     - Nếu $Credits_{conlai} < 12$ tín chỉ, ném mã lỗi `ERR_MINIMUM_CREDIT_UNMET`.
-  5. Mở Transaction có khóa hàng `CourseSection`:
-     - Cập nhật trạng thái bản ghi trong `enrollment_records` thành `DROPPED`.
-     - Giảm số lượng đã đăng ký: $N_{enrolled} = N_{enrolled} - 1$.
-     - Nếu lớp đang ở trạng thái `CLOSED`, tự động kích hoạt chuyển lại thành `OPEN`.
-  6. Commit Transaction.
-  7. Ghi nhật ký kiểm toán `action='DROP'` vào Module 5.
-  8. Trả về `ApiResponse` thông báo hủy môn thành công (HTTP 200).
+  1. Sinh viên bấm "Hủy Lớp" tại bảng các lớp đã đăng ký thành công.
+  2. Nạp bản ghi `EnrollmentRecord` có `status = ENROLLED` của sinh viên cho lớp đó.
+  3. **Kiểm tra BR-01:** Thời điểm hiện tại phải nằm trong đợt mở cổng cho phép hủy môn. Nếu không $\rightarrow$ ném `ERR_REGISTRATION_WINDOW_CLOSED`.
+  4. **Kiểm tra BR-05 (Ngưỡng tối thiểu 12 tín chỉ):** Tính $resultingCredits = currentCredits - droppedCourseCredits$. Nếu $resultingCredits < 12$ và sinh viên không có cờ ghi đè đặc quyền $\rightarrow$ ném `ERR_MINIMUM_CREDIT_UNMET`.
+  5. **Khóa bi quan & Thu hồi slot:** Khóa bản ghi lớp học phần bằng `findByIdWithPessimisticLock(sectionId)`. Giảm $enrolledCount = \max(0, enrolledCount - 1)$. Nếu trạng thái đang `CLOSED`, tự động đổi lại thành `OPEN`.
+  6. **Cập nhật bản ghi đăng ký:** Đổi `status = EnrollmentStatus.DROPPED`, gán `droppedAt = Instant.now()`.
+  7. Bắn sự kiện kiểm toán bất đồng bộ (`action = DROP`, `status = SUCCESS`).
+  8. Trả về HTTP 200 OK.
 * **Luồng ngoại lệ:**
-  * **E15.1 - Thấp hơn mức tín chỉ tối thiểu:** Trả về HTTP 400 `ERR_MINIMUM_CREDIT_UNMET`.
+  * **E15.1 - Vi phạm mức tín chỉ tối thiểu:** Trả về HTTP 400 `ERR_MINIMUM_CREDIT_UNMET`.
   * **E15.2 - Không tìm thấy bản ghi đăng ký:** Trả về HTTP 404 `ERR_ENROLLMENT_NOT_FOUND`.
 
 ---
 
-#### UC-16: Xem Thời khóa biểu & Danh sách môn đã đăng ký
-* **Tác tử:** Sinh viên.
-* **Mô tả:** Xem bảng tổng hợp danh sách các môn học đã đăng ký trong học kỳ kèm lưới Thời khóa biểu tuần trực quan.
-* **Tiền điều kiện:** Sinh viên đã đăng nhập thành công.
-* **Luồng sự kiện chính:**
-  1. Sinh viên truy cập mục "Thời khóa biểu của tôi".
-  2. Frontend gửi request `GET /api/v1/student/registrations/active`.
-  3. Backend truy vấn các `EnrollmentRecord` có `status = 'ENROLLED'` trong kỳ hiện tại của sinh viên, kèm `ScheduleSlot`, `Room`, `LecturerProfile`.
-  4. Backend tính toán tổng số tín chỉ tích lũy trong kỳ.
-  5. Trả về JSON chứa danh sách lớp và cấu trúc ma trận lịch học (Thứ, Tiết, Phòng).
-  6. Frontend hiển thị lưới thời khóa biểu từ Thứ 2 đến Chủ nhật, Tiết 1 đến Tiết 12.
+#### UC-16: Xem Thời khóa biểu Tuần & Môn Đã Đăng ký (Weekly Timetable View)
+* **Tác tử:** Sinh viên (`ROLE_STUDENT`).
+* **Mô tả:** Xem danh sách tổng hợp các lớp học phần đã đăng ký trong kỳ, tổng số tín chỉ tích lũy hiện tại và ma trận Thời khóa biểu trực quan (Thứ 2 đến Chủ nhật, Tiết 1 đến Tiết 12).
+* **API Endpoints (`StudentRegistrationController`):**
+  * `GET /api/v1/student/registrations/active` (`hasRole('STUDENT')`): Lấy thông tin đăng ký đang hiệu lực (hỗ trợ alias `/api/v1/student/registrations/my-schedule`).
+* **Query Parameters:** `semesterId` (tùy chọn; mặc định lấy kỳ active hiện hành).
+* **Response DTO (`ApiResponse<ActiveRegistrationsResponse>`):** Chứa `studentId`, `studentCode`, `studentName`, `semesterId`, `semesterName`, `totalCredits`, danh sách các lớp `enrolledSections` kèm đầy đủ `scheduleSlots` (thứ, tiết, phòng học, giảng viên).
+* **Hiển thị Frontend:** Ma trận lưới 7 ngày x 12 tiết trực quan trên `TimetablePage.jsx`.
 
 ---
 
-### PHÂN HỆ 5: BÁO CÁO, KIỂM TOÁN & SỔ ĐIỂM DANH (MODULE 5)
+### PHÂN HỆ 5: BÁO CÁO, ĐIỂM SỐ, SỔ ĐIỂM DANH & KIỂM TOÁN (MODULE 5)
+*Package Backend:* `com.unienroll.modules.reporting`  
+*Controllers:* `LecturerRosterController.java`, `OccupancyReportController.java`, `AdminAuditLogController.java`, `GradeController.java`  
+*Services:* `ClassRosterService.java`, `OccupancyReportService.java`, `AuditLogService.java`, `GradeService.java`  
+*Entities:* `RegistrationAuditLog`, `GradeRecord`
 
-#### UC-17: Xem & Xuất Danh sách Sinh viên Lớp học phần (Class Roster)
-* **Tác tử:** Giảng viên (`ROLE_LECTURER`).
-* **Mô tả:** Giảng viên xem danh sách sinh viên chính thức đã đăng ký lớp học phần do mình phụ trách để quản lý điểm danh và xuất file Excel/CSV.
-* **Tiền điều kiện:** Giảng viên được phân công giảng dạy lớp học phần này.
-* **Luồng sự kiện chính:**
-  1. Giảng viên gửi request `GET /api/v1/lecturer/sections/{sectionId}/students`.
-  2. Hệ thống kiểm tra tính hợp lệ: `section.lecturerId == currentUser.lecturerId`. Nếu không khớp, từ chối với HTTP 403 Forbidden.
-  3. Truy vấn danh sách sinh viên đang có trạng thái `ENROLLED` trong lớp.
-  4. Trả về danh sách gồm: Mã sinh viên, Họ và tên, Email, Lớp sinh hoạt, Thời điểm đăng ký.
-  5. Giảng viên có thể nhấn nút "Xuất Excel" để tải file danh sách điểm danh.
-* **Luồng ngoại lệ:**
-  * **E17.1 - Không có quyền xem lớp của giảng viên khác:** Trả về HTTP 403 `ERR_ACCESS_DENIED_NOT_ASSIGNED_LECTURER`.
+#### UC-17: Tra cứu & Xuất Danh sách Sinh viên Lớp (Class Roster)
+* **Tác tử:** Giảng viên (`ROLE_LECTURER`), Cán bộ Đào tạo (`ROLE_STAFF`), Quản trị viên (`ROLE_ADMIN`), Sinh viên xem bạn cùng lớp.
+* **Mô tả:** Giảng viên tra cứu danh sách sinh viên chính thức đã đăng ký lớp học phần do mình phụ trách để theo dõi sĩ số và in danh sách điểm danh.
+* **API Endpoints:**
+  * `GET /api/v1/lecturer/sections/{sectionId}/students` (`hasAnyRole('LECTURER', 'STAFF', 'ADMIN')`): Lấy danh sách sinh viên chính thức của lớp (hỗ trợ alias `/api/v1/lecturer/sections/{sectionId}/roster`).
+  * `GET /api/v1/student/registrations/sections/{sectionId}/roster` (`hasRole('STUDENT')`): Sinh viên xem danh sách bạn cùng lớp đối với lớp mình đang theo học.
+* **Cơ chế Phân Quyền Bảo Mật:**
+  * Nếu người gọi là `ROLE_LECTURER`: Hệ thống kiểm tra `section.lecturer.user.id == currentUser.id`. Nếu không trùng khớp, từ chối với HTTP 403 Forbidden `ERR_ACCESS_DENIED_NOT_ASSIGNED_LECTURER`.
+  * Nếu người gọi là `ROLE_STUDENT`: Chỉ được phép xem khi sinh viên đó có bản ghi `ENROLLED` trong lớp. Nếu không, từ chối với HTTP 403 `ERR_FORBIDDEN`.
+  * Staff và Admin có toàn quyền tra cứu mọi lớp.
+* **Response DTO (`ClassRosterResponse`):** Chứa thông tin lớp học phần, thông tin giảng viên, sĩ số ($N_{enrolled} / C_{max}$) và danh sách sinh viên (`ClassRosterStudentDto`: mã sinh viên, họ tên, email, khóa học, chuyên ngành, thời điểm đăng ký).
 
 ---
 
-#### UC-18: Báo cáo Thống kê Tỷ lệ Lấp đầy Lớp học phần (Occupancy Dashboard)
-* **Tác tử:** Academic Staff.
-* **Mô tả:** Báo cáo tỷ lệ lấp đầy ($N_{enrolled} / C_{max}$) của toàn bộ các lớp học phần trong học kỳ, cảnh báo các lớp đầy hoặc các lớp nguy cơ bị hủy do không đủ số lượng sinh viên tối thiểu.
-* **Tiền điều kiện:** Người dùng có quyền `ROLE_STAFF`.
-* **Luồng sự kiện chính:**
-  1. Staff truy cập Dashboard Thống kê, gửi request `GET /api/v1/academic/reports/occupancy?semesterId={id}`.
-  2. Hệ thống truy vấn tổng hợp toàn bộ các lớp trong kỳ:
-     - Nhóm lớp đầy 100% ($N_{enrolled} = C_{max}$): Gợi ý mở thêm lớp hoặc nâng sức chứa.
-     - Nhóm lớp ổn định ($50\% \le \text{Tỷ lệ} < 100\%$).
-     - Nhóm lớp dưới ngưỡng tối thiểu ($N_{enrolled} < 15$ sinh viên): Cảnh báo nguy cơ hủy lớp.
-  3. Trả về dữ liệu thống kê tổng quan và danh sách chi tiết.
+#### UC-18: Dashboard Báo cáo Tỷ lệ Lấp đầy Lớp Học phần (Occupancy Dashboard)
+* **Tác tử:** Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Báo cáo tỷ lệ lấp đầy ($N_{enrolled} / C_{max}$) của toàn bộ các lớp học phần trong học kỳ, hỗ trợ phân loại trực quan theo 3 nhóm để kịp thời điều chỉnh kế hoạch đào tạo.
+* **API Endpoints (`OccupancyReportController`):**
+  * `GET /api/v1/academic/reports/occupancy` (`hasRole('STAFF')`): Thống kê tỷ lệ lấp đầy (hỗ trợ alias `/api/v1/reports/occupancy`).
+* **Query Parameters:** `semesterId`.
+* **Quy chuẩn Phân Loại 3 Nhóm trong Code:**
+  1. **Nhóm Lớp Đầy 100% (`fullSections`):** $N_{enrolled} \ge C_{max}$ $\rightarrow$ Đề xuất tăng sức chứa hoặc mở thêm lớp mới.
+  2. **Nhóm Lớp Nguy Cơ Bị Hủy (`atRiskSections`):** $N_{enrolled} < 15$ sinh viên $\rightarrow$ Cảnh báo nguy cơ không đủ điều kiện mở lớp theo quy chế.
+  3. **Nhóm Lớp Hoạt Động Tối Ưu (`optimalSections`):** $15 \le N_{enrolled} < C_{max}$.
+* **Response DTO (`OccupancyDashboardResponse`):** Tổng số lớp, tổng chỉ tiêu toàn kỳ, tổng sinh viên đã ghi danh, tỷ lệ lấp đầy trung bình toàn trường (%) và 3 danh sách phân nhóm chi tiết.
 
 ---
 
 #### UC-19: Tra cứu Nhật ký Kiểm toán Đăng ký (Audit Logs Inquiry)
-* **Tác tử:** System Administrator, Academic Staff.
-* **Mô tả:** Tra cứu lịch sử toàn bộ các thao tác can thiệp dữ liệu (`ENROLL`, `DROP`, `OVERRIDE_CAPACITY`) nhằm phục vụ việc đối soát tranh chấp hoặc điều tra sự cố.
-* **Tiền điều kiện:** Người dùng có quyền `ROLE_ADMIN` hoặc `ROLE_STAFF`.
-* **Luồng sự kiện chính:**
-  1. Người dùng gửi `GET /api/v1/admin/audit-logs` kèm bộ lọc tùy chọn: `studentId`, `sectionId`, `actionType`, `startDate`, `endDate`.
-  2. Hệ thống truy vấn bảng `registration_audit_logs`.
-  3. Trả về danh sách nhật ký gồm: ID bản ghi, ID tác tử (`actor_id`), Hành động (`action_type`), ID lớp mục tiêu, Timestamp chính xác, Địa chỉ IP, Trạng thái (`SUCCESS`/`FAILED`), và Chi tiết thông báo lỗi (nếu có).
+* **Tác tử:** System Administrator (`ROLE_ADMIN`), Academic Staff (`ROLE_STAFF`).
+* **Mô tả:** Tra cứu lịch sử toàn bộ các thao tác can thiệp dữ liệu (`ENROLL`, `DROP`, `CANCEL`, `OVERRIDE_CAPACITY`) nhằm phục vụ đối soát khiếu nại hoặc điều tra an ninh (**BR-08**).
+* **API Endpoints (`AdminAuditLogController`):**
+  * `GET /api/v1/admin/audit-logs` (`hasAnyRole('ADMIN', 'STAFF')`): Xem nhật ký kiểm toán.
+* **Bộ lọc Hỗ trợ:** `actorId`, `sectionId`, `actionType` (`ENROLL`, `DROP`, `CANCEL`, `OVERRIDE_CAPACITY`), `status` (`SUCCESS`, `FAILED`).
+* **Đặc tính Dữ liệu:** Bản ghi kiểm toán là bất biến (**Append-Only**), được ghi nhận tự động qua cơ chế Spring Event Listener bất đồng bộ (`@Async @EventListener`).
+* **Response DTO (`AuditLogResponse`):** ID bản ghi, ID và username người thực hiện, loại hành động, ID lớp và mã môn mục tiêu, thời điểm chính xác (Instant), địa chỉ IP máy trạm, trạng thái thực thi (`SUCCESS`/`FAILED`) và nội dung thông báo lỗi chi tiết (nếu thất bại).
+
+---
+
+#### UC-20: Quản lý Điểm & Tra cứu Bảng điểm Tích lũy (Grade & Transcript Management)
+* **Tác tử:** Sinh viên (`ROLE_STUDENT`), Cán bộ Đào tạo (`ROLE_STAFF`).
+* **Mô tả:** Sinh viên tra cứu bảng điểm tích lũy cá nhân để theo dõi tiến độ đào tạo; Cán bộ Đào tạo nhập hoặc cập nhật điểm học phần cho sinh viên (vừa phục vụ quản trị điểm, vừa là công cụ Test Harness giả lập dữ liệu môn tiên quyết cho kịch bản kiểm thử **BR-04**).
+* **API Endpoints (`GradeController`):**
+  * `GET /api/v1/academic/grades/my-transcript` (`hasRole('STUDENT')`): Sinh viên xem bảng điểm cá nhân (hỗ trợ alias `/api/v1/student/grades/me`).
+  * `POST /api/v1/academic/grades` (`hasRole('STAFF')`): Cán bộ đào tạo nhập/cập nhật kết quả điểm môn học.
+  * `GET /api/v1/academic/grades/student/{studentId}` (`isAuthenticated()`): Xem bảng điểm của một sinh viên cụ thể.
+* **Request DTO (`GradeRecordRequest`):** `{ "studentId": 1, "courseId": 2, "semesterId": 1, "finalScore": 8.5, "status": "PASSED" }`
+* **Response DTO (`GradeRecordResponse`):** ID, mã và tên sinh viên, mã và tên môn học, số tín chỉ, học kỳ, điểm tổng kết (`finalScore`), trạng thái kết luận (`GradeStatus`: `PASSED`, `FAILED`, `INCOMPLETE`, `EXEMPTED`).
+
+---
+**Tài liệu Đặc Tả Use Case UniEnroll - Đồng bộ Hoàn toàn với Hiện trạng Mã Nguồn!**

@@ -6,14 +6,15 @@
 
 ## 📌 MỤC LỤC
 1. [Giới thiệu Tổng quan & Kiến trúc](#1-giới-thiệu-tổng-quan--kiến-trúc)
-2. [Hướng dẫn Khởi động & Tài khoản Mặc định](#2-hướng-dẫn-khởi-động--tài-khoản-mặc-định)
-3. [Ma trận Phân quyền theo Vai trò (RBAC Matrix)](#3-ma-trận-phân-quyền-theo-vai-trò-rbac-matrix)
-4. [Hướng dẫn Dành cho Quản trị viên (Admin)](#4-hướng-dẫn-dành-cho-quản-trị-viên-admin)
-5. [Hướng dẫn Dành cho Cán bộ Phòng Đào tạo (Academic Staff)](#5-hướng-dẫn-dành-cho-cán-bộ-phòng-đào-tạo-academic-staff)
-6. [Hướng dẫn Dành cho Giảng viên (Lecturer)](#6-hướng-dẫn-dành-cho-giảng-viên-lecturer)
-7. [Hướng dẫn Dành cho Sinh viên (Student)](#7-hướng-dẫn-dành-cho-sinh-viên-student)
-8. [Cẩm nang Quy tắc Nghiệp vụ (Business Rules) & Mã lỗi Thường gặp](#8-cẩm-nang-quy-tắc-nghiệp-vụ-business-rules--mã-lỗi-thường-gặp)
-9. [Kịch bản Kiểm thử & Sử dụng Mẫu từ Đầu đến Cuối (E2E Walkthrough)](#9-kịch-bản-kiểm-thử--sử-dụng-mẫu-từ-đầu-đến-cuối-e2e-walkthrough)
+2. [Hệ Thống Tài Liệu Đặc Tả & Phân Công Nhiệm Vụ](#2-hệ-thống-tài-liệu-đặc-tả--phân-công-nhiệm-vụ)
+3. [Hướng dẫn Khởi động & Tài khoản Mặc định](#3-hướng-dẫn-khởi-động--tài-khoản-mặc-định)
+4. [Ma trận Phân quyền theo Vai trò (RBAC Matrix)](#4-ma-trận-phân-quyền-theo-vai-trò-rbac-matrix)
+5. [Hướng dẫn Dành cho Quản trị viên (Admin)](#5-hướng-dẫn-dành-cho-quản-trị-viên-admin)
+6. [Hướng dẫn Dành cho Cán bộ Phòng Đào tạo (Academic Staff)](#6-hướng-dành-cho-cán-bộ-phòng-đào-tạo-academic-staff)
+7. [Hướng dẫn Dành cho Giảng viên (Lecturer)](#7-hướng-dẫn-dành-cho-giảng-viên-lecturer)
+8. [Hướng dẫn Dành cho Sinh viên (Student)](#8-hướng-dẫn-dành-cho-sinh-viên-student)
+9. [Cẩm nang Quy tắc Nghiệp vụ (Business Rules) & Mã lỗi Thường gặp](#9-cẩm-nang-quy-tắc-nghiệp-vụ-business-rules--mã-lỗi-thường-gặp)
+10. [Kịch bản Kiểm thử & Sử dụng Mẫu từ Đầu đến Cuối (E2E Walkthrough)](#10-kịch-bản-kiểm-thử--sử-dụng-mẫu-từ-đầu-đến-cuối-e2e-walkthrough)
 
 ---
 
@@ -53,7 +54,20 @@ flowchart TD
 
 ---
 
-## 2. HƯỚNG DẪN KHỞI ĐỘNG & TÀI KHOẢN MẶC ĐỊNH
+## 2. HỆ THỐNG TÀI LIỆU ĐẶC TẢ & PHÂN CÔNG NHIỆM VỤ
+
+Dự án UniEnroll được thiết kế và chuẩn hóa với bộ tài liệu chuyên sâu chi tiết:
+
+| Tài liệu | Mô tả nội dung | Liên kết truy cập |
+| :--- | :--- | :--- |
+| 📑 **Use Case Specification** | Đặc tả chi tiết 20 Use Cases bao quát toàn bộ 5 module hệ thống, luồng sự kiện, DTOs và ngoại lệ. | [README_USE_CASES.md](file:///d:/UniEnroll/README_USE_CASES.md) |
+| 🛡️ **Business Rules Specification** | Đặc tả 6 Bất biến cốt lõi (BR-01 đến BR-06), 4 quy tắc bổ trợ, cơ chế Khóa bi quan và Ma trận mã lỗi. | [README_BUSINESS_RULES.md](file:///d:/UniEnroll/README_BUSINESS_RULES.md) |
+| 👥 **Team Workload & Module Assignments** | Kế hoạch chia đều 5 module độc lập cho 5 thành viên (Full-stack từ DB, Backend, Frontend đến Test). | [README_MODULE_ASSIGNMENTS.md](file:///d:/UniEnroll/README_MODULE_ASSIGNMENTS.md) |
+| 🧪 **Test Cases Specification** | Bộ 25+ ca kiểm thử chi tiết bao trùm toàn bộ các đối tượng tác tử (Actors) và các kịch bản ngoại lệ. | [TEST_CASES_ALL_ACTORS.md](file:///d:/UniEnroll/TEST_CASES_ALL_ACTORS.md) |
+
+---
+
+## 3. HƯỚNG DẪN KHỞI ĐỘNG & TÀI KHOẢN MẶC ĐỊNH
 
 ### 2.1. Yêu cầu Môi trường
 - **Java Development Kit (JDK):** Phiên bản 21 trở lên.
@@ -95,7 +109,7 @@ Hệ thống đã tự động kích hoạt 4 tài khoản tiêu chuẩn đại 
 
 ---
 
-## 3. MA TRẬN PHÂN QUYỀN THEO VAI TRÒ (RBAC MATRIX)
+## 4. MA TRẬN PHÂN QUYỀN THEO VAI TRÒ (RBAC MATRIX)
 
 | Chức năng & Màn hình | Quản trị viên (ADMIN) | Cán bộ Đào tạo (STAFF) | Giảng viên (LECTURER) | Sinh viên (STUDENT) |
 | :--- | :---: | :---: | :---: | :---: |
@@ -107,7 +121,7 @@ Hệ thống đã tự động kích hoạt 4 tài khoản tiêu chuẩn đại 
 | **Quản lý Học kỳ & Phòng học (UC-08)** | ❌ Không | ✅ Toàn quyền | ❌ Không | ❌ Không |
 | **Mở Lớp học phần & Xếp lịch (UC-09, 10, 11)** | ❌ Không | ✅ Toàn quyền | ❌ Không | ❌ Không |
 | **Thiết lập Đợt mở cổng ĐKHP (UC-12)** | ❌ Không | ✅ Toàn quyền | ❌ Không | ❌ Không |
-| **Tiện ích Nhập điểm Tiên quyết (UC-14/Harness)**| ❌ Không | ✅ Toàn quyền | ❌ Không | ❌ Không |
+| **Quản lý Điểm & Test Tiên quyết (UC-20)**| ❌ Không | ✅ Toàn quyền | ❌ Không | ✅ Xem điểm |
 | **Báo cáo Tỷ lệ Lấp đầy Lớp (UC-18)** | ❌ Không | ✅ Toàn quyền | ❌ Không | ❌ Không |
 | **Xem Danh sách Lớp giảng dạy (UC-17)** | ❌ Không | ❌ Không | ✅ Toàn quyền | ❌ Không |
 | **Cổng Đăng ký Học phần (UC-13, 14, 15)** | ❌ Không | ❌ Không | ❌ Không | ✅ Toàn quyền |
@@ -115,7 +129,7 @@ Hệ thống đã tự động kích hoạt 4 tài khoản tiêu chuẩn đại 
 
 ---
 
-## 4. HƯỚNG DẪN DÀNH CHO QUẢN TRỊ VIÊN (ADMIN)
+## 5. HƯỚNG DẪN DÀNH CHO QUẢN TRỊ VIÊN (ADMIN)
 
 Quản trị viên chịu trách nhiệm kiểm soát an toàn bảo mật, định danh người dùng và giám sát vết kiểm toán toàn trường.
 
@@ -151,7 +165,7 @@ Quản trị viên chịu trách nhiệm kiểm soát an toàn bảo mật, đ�
 
 ---
 
-## 5. HƯỚNG DẪN DÀNH CHO CÁN BỘ PHÒNG ĐÀO TẠO (ACADEMIC STAFF)
+## 6. HƯỚNG DẪN DÀNH CHO CÁN BỘ PHÒNG ĐÀO TẠO (ACADEMIC STAFF)
 
 Cán bộ Phòng Đào tạo giữ vai trò vận hành xương sống của hệ thống, thiết lập toàn bộ quy chế và danh mục đào tạo trước khi mở cổng đăng ký cho sinh viên.
 
@@ -248,7 +262,7 @@ flowchart TD
 
 ---
 
-## 6. HƯỚNG DẪN DÀNH CHO GIẢNG VIÊN (LECTURER)
+## 7. HƯỚNG DẪN DÀNH CHO GIẢNG VIÊN (LECTURER)
 
 Giảng viên theo dõi tiến độ giảng dạy và danh sách sinh viên chính thức của các lớp được phân công.
 
@@ -269,7 +283,7 @@ Giảng viên theo dõi tiến độ giảng dạy và danh sách sinh viên ch�
 
 ---
 
-## 7. HƯỚNG DẪN DÀNH CHO SINH VIÊN (STUDENT)
+## 8. HƯỚNG DẪN DÀNH CHO SINH VIÊN (STUDENT)
 
 Sinh viên sử dụng hệ thống để lập kế hoạch học tập, tra cứu lớp học phần mở và đăng ký trực tuyến theo thời gian thực.
 
@@ -315,25 +329,28 @@ flowchart TD
 
 ---
 
-## 8. CẨM NANG QUY TẮC NGHIỆP VỤ (BUSINESS RULES) & MÃ LỖI THƯỜNG GẶP
+## 9. CẨM NANG QUY TẮC NGHIỆP VỤ (BUSINESS RULES) & MÃ LỖI THƯỜNG GẶP
 
-Khi một thao tác đăng ký bị từ chối, Backend UniEnroll sẽ trả về mã lỗi chuẩn hóa để hiển thị rõ nguyên nhân trên giao diện:
+Khi một thao tác đăng ký bị từ chối, Backend UniEnroll sẽ trả về mã lỗi chuẩn hóa để hiển thị rõ nguyên nhân trên giao diện (xem chi tiết tại [README_BUSINESS_RULES.md](file:///d:/UniEnroll/README_BUSINESS_RULES.md)):
 
-| Mã Lỗi Hệ thống | Quy tắc Vi phạm | Ý nghĩa Nghiệp vụ | Cách Khắc phục |
+| Mã Lỗi Hệ thống (`ErrorCode`) | Quy tắc Vi phạm | Ý nghĩa Nghiệp vụ | Cách Khắc phục |
 | :--- | :--- | :--- | :--- |
 | `ERR_REGISTRATION_WINDOW_CLOSED` | **BR-01 (Thời gian)** | Cổng đăng ký chưa đến giờ mở hoặc đã kết thúc thời hạn cho phép. | Kiểm tra lại lịch mở cổng của Phòng Đào tạo tại trang Đợt Đăng Ký. |
 | `ERR_SECTION_CAPACITY_FULL` | **BR-02 (Sức chứa)** | Lớp học phần đã đủ $100\%$ chỉ tiêu chỗ ngồi ($N_{enrolled} = C_{max}$). | Chọn lớp học phần khác của cùng môn hoặc đề xuất Phòng Đào tạo tăng chỉ tiêu. |
-| `ERR_SCHEDULE_COLLISION` | **BR-03 (Trùng lịch)** | Lịch học của lớp này bị trùng thứ và khoảng tiết với một lớp sinh viên đã đăng ký trước đó. | Hủy lớp cũ gây trùng hoặc chọn lớp học phần có khung giờ khác. |
-| `ERR_PREREQUISITE_NOT_MET` | **BR-04 (Tiên quyết)** | Sinh viên chưa hoàn thành hoặc chưa đạt điểm `PASSED` ở môn tiên quyết bắt buộc. | Đăng ký và tích lũy đạt môn tiên quyết trước khi đăng ký môn kế tiếp. |
+| `ERR_TIMETABLE_COLLISION` | **BR-03 (Trùng lịch)** | Lịch học của lớp này bị trùng thứ và khoảng tiết với một lớp sinh viên đã đăng ký trước đó. | Hủy lớp cũ gây trùng hoặc chọn lớp học phần có khung giờ khác. |
+| `ERR_PREREQUISITE_NOT_FULFILLED` | **BR-04 (Tiên quyết)** | Sinh viên chưa hoàn thành hoặc chưa đạt điểm `PASSED` ở môn tiên quyết bắt buộc. | Đăng ký và tích lũy đạt môn tiên quyết trước khi đăng ký môn kế tiếp. |
 | `ERR_CREDIT_LIMIT_EXCEEDED` | **BR-05 (Vượt tín chỉ)** | Tổng tín chỉ sau khi đăng ký lớp này sẽ vượt quá định mức tối đa ($N_{max} = 24$ TC). | Hủy bớt môn học khác hoặc xin duyệt ghi đè hạn mức tín chỉ từ Phòng Đào tạo. |
-| `ERR_DUPLICATE_COURSE_ENROLLMENT` | **BR-06 (Trùng môn)** | Sinh viên đã đăng ký thành công một lớp khác của cùng môn học này trong kỳ. | Không cần đăng ký lại; nếu muốn đổi lớp, cần hủy lớp cũ trước khi đăng ký lớp mới. |
+| `ERR_MINIMUM_CREDIT_UNMET` | **BR-05 (Dưới mức sàn)** | Tổng tín chỉ sau khi hủy lớp này sẽ thấp hơn hạn mức tối thiểu yêu cầu ($N_{min} = 12$ TC). | Không thể hủy lớp nếu tổng tín chỉ còn lại dưới 12 TC. |
+| `ERR_DUPLICATE_COURSE_REGISTRATION` | **BR-06 (Trùng môn)** | Sinh viên đã đăng ký thành công một lớp khác của cùng môn học này trong kỳ. | Không cần đăng ký lại; nếu muốn đổi lớp, cần hủy lớp cũ trước khi đăng ký lớp mới. |
 | `ERR_ROOM_CAPACITY_INSUFFICIENT` | **BR-09 (Hạ tầng)** | Sức chứa phòng học nhỏ hơn chỉ tiêu lớp học phần dự kiến mở ($C_{room} < C_{max}$). | Cán bộ Đào tạo đổi sang phòng học có sức chứa lớn hơn hoặc giảm chỉ tiêu lớp. |
+| `ERR_CAPACITY_LOWER_THAN_ENROLLED` | **BR-09 (Hạ tầng)** | Không thể giảm chỉ tiêu sức chứa lớp học phần xuống thấp hơn số sinh viên hiện đã ghi danh. | Nhập sức chứa mới lớn hơn hoặc bằng số lượng sinh viên đã đăng ký. |
 | `ERR_ROOM_SCHEDULE_CONFLICT` | **BR-03 (Hạ tầng)** | Phòng học đã được bố trí cho một lớp khác trong cùng khung giờ. | Chọn phòng học khác còn trống cho khung giờ đó. |
+| `ERR_LECTURER_SCHEDULE_CONFLICT` | **BR-03 (Hạ tầng)** | Giảng viên đã được phân công dạy một lớp khác trong cùng khung giờ. | Phân công giảng viên khác hoặc bố trí khung giờ khác cho lớp. |
 | `ERR_CIRCULAR_PREREQUISITE_DETECTED` | **BR-04 (DFS Graph)** | Phát hiện chu trình phụ thuộc vòng tròn giữa các môn tiên quyết. | Kiểm tra lại đồ thị tiên quyết, gỡ bỏ liên kết gây chu trình. |
 
 ---
 
-## 9. KỊCH BẢN KIỂM THỬ & SỬ DỤNG MẪU TỪ ĐẦU ĐẾN CUỐI (E2E WALKTHROUGH)
+## 10. KỊCH BẢN KIỂM THỬ & SỬ DỤNG MẪU TỪ ĐẦU ĐẾN CUỐI (E2E WALKTHROUGH)
 
 Bạn có thể thực hiện kiểm thử toàn diện toàn bộ quy trình của trường đại học trong 10 phút theo kịch bản mẫu sau:
 
