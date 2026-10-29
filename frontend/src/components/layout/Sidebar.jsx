@@ -33,6 +33,12 @@ const Sidebar = () => {
       icon: Calendar,
       roles: ['STUDENT'],
     },
+    {
+      label: 'Bảng điểm & Kết quả',
+      path: '/student/grades',
+      icon: Award,
+      roles: ['STUDENT'],
+    },
 
     // LECTURER NAV ITEMS
     {

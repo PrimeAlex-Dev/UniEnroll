@@ -10,4 +10,6 @@ export const registrationApi = {
   enroll: (data) => axiosClient.post('/registration/enroll', data),
   drop: (data) => axiosClient.post('/registration/drop', data),
   getMySchedule: (semesterId) => axiosClient.get('/registration/my-schedule', { params: { semesterId } }),
+  getMyTranscript: () => axiosClient.get('/student/grades/my-transcript'),
+  getSectionRoster: (sectionId) => axiosClient.get(`/student/registrations/sections/${sectionId}/roster`),
 };

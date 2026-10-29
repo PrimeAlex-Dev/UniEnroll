@@ -6,6 +6,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Table from '../../components/common/Table';
 import Badge from '../../components/common/Badge';
+import Modal from '../../components/common/Modal';
 import BackendErrorAlert from '../../components/common/BackendErrorAlert';
 import {
   GraduationCap,
@@ -17,6 +18,10 @@ import {
   Layers,
   BookCheck,
   RefreshCw,
+  Users,
+  Mail,
+  MapPin,
+  CalendarDays,
 } from 'lucide-react';
 
 const RegistrationStudioPage = () => {
@@ -35,6 +40,13 @@ const RegistrationStudioPage = () => {
   // Errors & Notifications
   const [error, setError] = useState(null);
   const [successNotice, setSuccessNotice] = useState(null);
+
+  // Class Roster Modal State (Xem bạn học cùng lớp & giảng viên)
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+  const [rosterData, setRosterData] = useState(null);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState(null);
+  const [rosterFilter, setRosterFilter] = useState('');
 
   const initData = async () => {
     try {
@@ -122,6 +134,38 @@ const RegistrationStudioPage = () => {
       setError(err);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const formatDayOfWeek = (day) => {
+    if (!day) return '';
+    const d = String(day).toUpperCase();
+    switch (d) {
+      case 'MONDAY': case '2': return 'Thứ Hai';
+      case 'TUESDAY': case '3': return 'Thứ Ba';
+      case 'WEDNESDAY': case '4': return 'Thứ Tư';
+      case 'THURSDAY': case '5': return 'Thứ Năm';
+      case 'FRIDAY': case '6': return 'Thứ Sáu';
+      case 'SATURDAY': case '7': return 'Thứ Bảy';
+      case 'SUNDAY': case '8': case '1': return 'Chủ Nhật';
+      default: return d;
+    }
+  };
+
+  const handleOpenRoster = async (sectionId) => {
+    setIsRosterModalOpen(true);
+    setRosterLoading(true);
+    setRosterError(null);
+    setRosterData(null);
+    setRosterFilter('');
+    try {
+      const res = await registrationApi.getSectionRoster(sectionId);
+      setRosterData(res.data);
+    } catch (err) {
+      console.error('Failed to load roster:', err);
+      setRosterError(err);
+    } finally {
+      setRosterLoading(false);
     }
   };
 
@@ -315,17 +359,35 @@ const RegistrationStudioPage = () => {
                     <span className="font-semibold text-sm text-slate-800">{sec.courseName}</span>
                     <Badge variant="ENROLLED">ĐÃ GHI DANH</Badge>
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    {sec.credits} Tín chỉ • Phòng: {sec.building} {sec.roomNumber}
+                  <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span>{sec.credits} Tín chỉ</span>
+                    <span>•</span>
+                    <span className="text-slate-700 font-medium">
+                      GV: {sec.lecturerName || 'Chưa phân công'}
+                    </span>
+                    {sec.building && sec.roomNumber && (
+                      <>
+                        <span>•</span>
+                        <span>Phòng: {sec.building} - {sec.roomNumber}</span>
+                      </>
+                    )}
                     {sec.scheduleSlots?.map((sl, i) => (
-                      <span key={i} className="ml-2 font-mono text-slate-600">
-                        • Thứ {sl.dayOfWeek} (Tiết {sl.startPeriod}-{sl.endPeriod})
+                      <span key={i} className="font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[11px]">
+                        {formatDayOfWeek(sl.dayOfWeek)} (Tiết {sl.startPeriod}-{sl.endPeriod})
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={Users}
+                    onClick={() => handleOpenRoster(sec.id)}
+                  >
+                    Xem Lớp & Bạn Học
+                  </Button>
                   <Button
                     size="sm"
                     variant="danger"
@@ -388,6 +450,174 @@ const RegistrationStudioPage = () => {
           <Table columns={catalogColumns} data={catalogSections} />
         )}
       </Card>
+
+      {/* Class Roster & Classmates Modal */}
+      <Modal
+        isOpen={isRosterModalOpen}
+        onClose={() => setIsRosterModalOpen(false)}
+        title={
+          rosterData
+            ? `Chi Tiết Lớp & Danh Sách Bạn Học: ${rosterData.sectionCode} - ${rosterData.courseName}`
+            : 'Chi Tiết Lớp Học Phần'
+        }
+        maxWidth="max-w-4xl"
+        footer={
+          <Button variant="outline" size="sm" onClick={() => setIsRosterModalOpen(false)}>
+            Đóng
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <BackendErrorAlert error={rosterError} />
+
+          {rosterLoading ? (
+            <div className="py-12 text-center text-sm text-slate-500">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
+              Đang tải thông tin lớp và danh sách bạn học...
+            </div>
+          ) : rosterData ? (
+            <>
+              {/* Thông tin tổng quan của Lớp */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                <div>
+                  <div className="text-slate-400 font-semibold uppercase text-[10px]">Giảng Viên Phụ Trách</div>
+                  <div className="text-slate-900 font-bold text-sm mt-0.5 flex items-center gap-1.5">
+                    <span>{rosterData.lecturerName || 'Chưa phân công'}</span>
+                  </div>
+                  {rosterData.lecturerEmail && (
+                    <div className="text-indigo-600 font-mono mt-0.5 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>{rosterData.lecturerEmail}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-slate-400 font-semibold uppercase text-[10px]">Sĩ Số Hiện Tại</div>
+                  <div className="text-slate-900 font-bold text-sm mt-0.5">
+                    {rosterData.enrolledCount} / {rosterData.capacity} sinh viên
+                  </div>
+                  <div className="text-emerald-600 mt-0.5 font-medium">
+                    {rosterData.capacity - rosterData.enrolledCount > 0
+                      ? `Còn trống ${rosterData.capacity - rosterData.enrolledCount} chỗ`
+                      : 'Lớp đã đủ sĩ số'}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-slate-400 font-semibold uppercase text-[10px]">Lịch Học & Phòng</div>
+                  {rosterData.schedules && rosterData.schedules.length > 0 ? (
+                    <div className="space-y-1 mt-0.5">
+                      {rosterData.schedules.map((s, idx) => (
+                        <div key={idx} className="text-slate-800 font-medium flex items-center gap-1">
+                          <CalendarDays className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                          <span>
+                            {formatDayOfWeek(s.dayOfWeek)}: Tiết {s.startPeriod}-{s.endPeriod}
+                          </span>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-indigo-700 font-semibold">
+                            {s.roomNumber ? `${s.building || ''} ${s.roomNumber}` : 'Chưa xếp phòng'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-slate-500 italic mt-0.5">Chưa xếp lịch học</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Danh sách sinh viên cùng lớp */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Danh Sách Sinh Viên Cùng Lớp ({rosterData.students?.length || 0})
+                    </h4>
+                  </div>
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                    <input
+                      type="text"
+                      value={rosterFilter}
+                      onChange={(e) => setRosterFilter(e.target.value)}
+                      placeholder="Tìm bạn học theo tên, MSSV..."
+                      className="pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-800 w-full sm:w-60 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs text-slate-600">
+                    <thead className="bg-slate-50 text-[11px] font-semibold uppercase text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3 text-center w-10">STT</th>
+                        <th className="py-2.5 px-3">Mã SV</th>
+                        <th className="py-2.5 px-3">Họ và Tên</th>
+                        <th className="py-2.5 px-3">Khóa / Ngành</th>
+                        <th className="py-2.5 px-3">Email Liên Hệ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {(() => {
+                        const students = (rosterData.students || []).filter((st) => {
+                          if (!rosterFilter) return true;
+                          const q = rosterFilter.toLowerCase();
+                          return (
+                            (st.studentCode && st.studentCode.toLowerCase().includes(q)) ||
+                            (st.fullName && st.fullName.toLowerCase().includes(q)) ||
+                            (st.email && st.email.toLowerCase().includes(q)) ||
+                            (st.major && st.major.toLowerCase().includes(q))
+                          );
+                        });
+
+                        if (students.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={5} className="py-6 text-center text-slate-400 italic">
+                                Không tìm thấy sinh viên phù hợp.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return students.map((st, i) => (
+                          <tr key={st.studentId || i} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 text-center text-slate-400">{i + 1}</td>
+                            <td className="py-2 px-3 font-mono font-bold text-indigo-700">
+                              {st.studentCode}
+                            </td>
+                            <td className="py-2 px-3 font-medium text-slate-900">
+                              {st.fullName}
+                            </td>
+                            <td className="py-2 px-3 text-slate-500">
+                              {st.cohort ? `K${st.cohort} - ` : ''}{st.major || '-'}
+                            </td>
+                            <td className="py-2 px-3 text-slate-600 font-mono">
+                              {st.email ? (
+                                <a
+                                  href={`mailto:${st.email}`}
+                                  className="text-indigo-600 hover:underline flex items-center gap-1"
+                                >
+                                  <Mail className="w-3 h-3 text-indigo-400" />
+                                  <span>{st.email}</span>
+                                </a>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 };

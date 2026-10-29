@@ -262,4 +262,47 @@ class LecturerRosterTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.students", hasSize(1)));
     }
+
+    @Test
+    @DisplayName("UC-17: Sinh viên đã ghi danh được phép xem chi tiết lớp & danh sách bạn học -> 200 OK")
+    void shouldAllowEnrolledStudentToViewTheirSectionRoster() throws Exception {
+        mockMvc.perform(get("/api/v1/student/registrations/sections/{sectionId}/roster", sectionOfLecturerA.getId())
+                        .header("Authorization", "Bearer " + studentToken)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.sectionCode").value("CS101.N01"))
+                .andExpect(jsonPath("$.data.courseCode").value("CS101"))
+                .andExpect(jsonPath("$.data.lecturerName").value("TS. Nguyễn Văn A"))
+                .andExpect(jsonPath("$.data.students", hasSize(1)))
+                .andExpect(jsonPath("$.data.students[0].studentCode").value("SV_ROSTER_01"));
+    }
+
+    @Test
+    @DisplayName("UC-17: Sinh viên chưa ghi danh cố tình xem danh sách lớp -> 403 Forbidden")
+    void shouldDenyNonEnrolledStudentFromViewingSectionRoster() throws Exception {
+        // Tạo thêm 1 sinh viên khác không ghi danh vào lớp sectionOfLecturerA
+        User userOtherStudent = userRepository.save(User.builder()
+                .username("student_other")
+                .password(passwordEncoder.encode("Pass@123"))
+                .email("other_sv@unienroll.edu.vn")
+                .role(Role.ROLE_STUDENT)
+                .status(UserStatus.ACTIVE)
+                .build());
+        studentRepository.save(StudentProfile.builder()
+                .studentCode("SV_OTHER_99")
+                .fullName("Trần Thị Ngoại Cuộc")
+                .cohort("2024")
+                .major("KTPM")
+                .user(userOtherStudent)
+                .build());
+        String otherStudentToken = jwtTokenProvider.generateAccessToken(userOtherStudent.getId(), userOtherStudent.getUsername(), userOtherStudent.getRole());
+
+        mockMvc.perform(get("/api/v1/student/registrations/sections/{sectionId}/roster", sectionOfLecturerA.getId())
+                        .header("Authorization", "Bearer " + otherStudentToken)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value(ErrorCode.ERR_FORBIDDEN.name()));
+    }
 }

@@ -227,4 +227,33 @@ class GradeControllerTest {
                 .andExpect(jsonPath("$.data[0].finalScore").value(9.0))
                 .andExpect(jsonPath("$.data[0].status").value("PASSED"));
     }
+
+    @Test
+    @DisplayName("Sinh viên tra cứu bảng điểm cá nhân qua endpoint /api/v1/student/grades/my-transcript thành công")
+    void shouldGetMyTranscriptSuccessfully() throws Exception {
+        // Nhập điểm cho sinh viên
+        GradeRecordRequest request = GradeRecordRequest.builder()
+                .studentId(savedStudent.getId())
+                .courseId(savedCourse.getId())
+                .semesterId(savedSemester.getId())
+                .finalScore(8.5)
+                .status(GradeStatus.PASSED)
+                .build();
+
+        mockMvc.perform(post("/api/v1/academic/grades")
+                        .header("Authorization", "Bearer " + staffToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        // Sinh viên tự gọi /api/v1/student/grades/my-transcript
+        mockMvc.perform(get("/api/v1/student/grades/my-transcript")
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].studentCode").value(savedStudent.getStudentCode()))
+                .andExpect(jsonPath("$.data[0].finalScore").value(8.5))
+                .andExpect(jsonPath("$.data[0].courseCode").value(savedCourse.getCode()));
+    }
 }

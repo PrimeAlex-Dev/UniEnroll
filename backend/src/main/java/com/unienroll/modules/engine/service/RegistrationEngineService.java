@@ -410,6 +410,8 @@ public class RegistrationEngineService {
                 .totalCredits(section.getCourse().getTotalCredits())
                 .semesterId(section.getSemester().getId())
                 .semesterName(section.getSemester().getName())
+                .lecturerId(section.getLecturer() != null ? section.getLecturer().getId() : null)
+                .lecturerName(section.getLecturer() != null ? section.getLecturer().getFullName() : null)
                 .capacity(section.getCapacity())
                 .enrolledCount(section.getEnrolledCount())
                 .availableSlots(Math.max(0, section.getCapacity() - section.getEnrolledCount()))

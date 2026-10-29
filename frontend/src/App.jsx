@@ -19,6 +19,7 @@ import GradesPage from './pages/staff/GradesPage';
 import OccupancyReportPage from './pages/staff/OccupancyReportPage';
 import RegistrationStudioPage from './pages/student/RegistrationStudioPage';
 import TimetablePage from './pages/student/TimetablePage';
+import StudentGradesPage from './pages/student/StudentGradesPage';
 import ClassRosterPage from './pages/lecturer/ClassRosterPage';
 
 // Smart Home Redirector
@@ -59,6 +60,7 @@ function App() {
             <Route element={<RoleProtectedRoute allowedRoles={['STUDENT']} />}>
               <Route path="/student/registration" element={<RegistrationStudioPage />} />
               <Route path="/student/timetable" element={<TimetablePage />} />
+              <Route path="/student/grades" element={<StudentGradesPage />} />
             </Route>
 
             {/* LECTURER ONLY ROUTES */}

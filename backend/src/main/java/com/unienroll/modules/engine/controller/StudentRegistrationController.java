@@ -9,6 +9,8 @@ import com.unienroll.modules.engine.dto.ActiveRegistrationsResponse;
 import com.unienroll.modules.engine.dto.EnrollmentRequest;
 import com.unienroll.modules.engine.dto.EnrollmentResponse;
 import com.unienroll.modules.engine.service.RegistrationEngineService;
+import com.unienroll.modules.reporting.dto.ClassRosterResponse;
+import com.unienroll.modules.reporting.service.ClassRosterService;
 import com.unienroll.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -26,6 +28,7 @@ public class StudentRegistrationController {
 
     private final RegistrationEngineService registrationEngineService;
     private final StudentProfileRepository studentProfileRepository;
+    private final ClassRosterService classRosterService;
 
     /**
      * UC-14: Đăng ký Lớp học phần (Core Transaction)
@@ -87,6 +90,18 @@ public class StudentRegistrationController {
     ) {
         Long studentId = getStudentId(userDetails);
         ActiveRegistrationsResponse response = registrationEngineService.getActiveRegistrations(studentId, semesterId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Xem chi tiết lớp học phần và danh sách bạn học cùng lớp
+     */
+    @GetMapping({"/sections/{sectionId}/roster", "/sections/{sectionId}/classmates"})
+    public ResponseEntity<ApiResponse<ClassRosterResponse>> getSectionRoster(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long sectionId
+    ) {
+        ClassRosterResponse response = classRosterService.getClassRoster(userDetails.getId(), sectionId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

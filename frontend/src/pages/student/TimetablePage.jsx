@@ -7,13 +7,13 @@ import BackendErrorAlert from '../../components/common/BackendErrorAlert';
 import { Calendar, RefreshCw, Printer } from 'lucide-react';
 
 const DAYS = [
-  { value: 2, label: 'Thứ Hai' },
-  { value: 3, label: 'Thứ Ba' },
-  { value: 4, label: 'Thứ Tư' },
-  { value: 5, label: 'Thứ Năm' },
-  { value: 6, label: 'Thứ Sáu' },
-  { value: 7, label: 'Thứ Bảy' },
-  { value: 8, label: 'Chủ Nhật' },
+  { value: 'MONDAY', label: 'Thứ Hai' },
+  { value: 'TUESDAY', label: 'Thứ Ba' },
+  { value: 'WEDNESDAY', label: 'Thứ Tư' },
+  { value: 'THURSDAY', label: 'Thứ Năm' },
+  { value: 'FRIDAY', label: 'Thứ Sáu' },
+  { value: 'SATURDAY', label: 'Thứ Bảy' },
+  { value: 'SUNDAY', label: 'Chủ Nhật' },
 ];
 
 const PERIODS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -78,8 +78,9 @@ const TimetablePage = () => {
     schedule.enrolledSections.forEach((sec, secIdx) => {
       const color = COLOR_PALETTE[secIdx % COLOR_PALETTE.length];
       sec.scheduleSlots?.forEach((slot) => {
+        const dayKey = slot.dayOfWeek ? String(slot.dayOfWeek).toUpperCase() : '';
         for (let p = slot.startPeriod; p <= slot.endPeriod; p++) {
-          slotMap[`${slot.dayOfWeek}_${p}`] = {
+          slotMap[`${dayKey}_${p}`] = {
             section: sec,
             slot,
             color,
@@ -195,8 +196,13 @@ const TimetablePage = () => {
                                 Lớp: {cell.section.sectionCode}
                               </div>
                               <div className="text-[10px] font-semibold opacity-90">
-                                P.{cell.section.roomNumber} ({cell.section.building})
+                                P.{cell.slot.roomNumber || cell.section.roomNumber} ({cell.slot.building || cell.section.building})
                               </div>
+                              {cell.section.lecturerName && (
+                                <div className="text-[10px] font-medium opacity-90 truncate" title={`GV: ${cell.section.lecturerName}`}>
+                                  GV: {cell.section.lecturerName}
+                                </div>
+                              )}
                               <div className="text-[9px] opacity-75 font-mono">
                                 Tiết {cell.slot.startPeriod}-{cell.slot.endPeriod}
                               </div>

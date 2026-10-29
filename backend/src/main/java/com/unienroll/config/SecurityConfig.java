@@ -70,7 +70,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/departments/**", "/api/v1/curriculum/departments/**", "/api/v1/academic/departments/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/**", "/api/v1/curriculum/courses/**", "/api/v1/academic/courses/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/sections/**", "/api/v1/catalog/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/academic/grades/student/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/academic/grades/**").authenticated()
 
                         // UC-05: Quản lý Khoa / Bộ môn (Tác tử: Academic Staff & Admin)
                         .requestMatchers("/api/v1/admin/departments/**", "/api/v1/curriculum/departments/**", "/api/v1/academic/departments/**").hasAnyRole("ADMIN", "STAFF")

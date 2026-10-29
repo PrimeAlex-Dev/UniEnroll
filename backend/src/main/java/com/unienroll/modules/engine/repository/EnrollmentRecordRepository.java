@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRecordRepository extends JpaRepository<EnrollmentRecord, Long> {
 
-    @EntityGraph(attributePaths = {"student", "section", "section.scheduleSlots", "section.scheduleSlots.room", "course", "semester"})
+    @EntityGraph(attributePaths = {"student", "section", "section.lecturer", "section.scheduleSlots", "section.scheduleSlots.room", "course", "semester"})
     List<EnrollmentRecord> findByStudentIdAndSemesterIdAndStatus(Long studentId, Long semesterId, EnrollmentStatus status);
 
     @EntityGraph(attributePaths = {"student", "section", "course", "semester"})
