@@ -79,6 +79,7 @@ public class GradeService {
     @Transactional
     public GradeRecordResponse recordGrade(GradeRecordRequest request) {
         StudentProfile student = studentRepository.findById(request.getStudentId())
+                .or(() -> studentRepository.findByUserId(request.getStudentId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy sinh viên với ID: " + request.getStudentId()));
 
         Course course = courseRepository.findById(request.getCourseId())

@@ -21,10 +21,10 @@ public class GradeController {
     private final GradeService gradeService;
 
     /**
-     * Nhập / Cập nhật điểm cho sinh viên (Cán bộ Đào tạo & Admin)
+     * Nhập / Cập nhật điểm cho sinh viên (Cán bộ Đào tạo)
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<GradeRecordResponse>> recordGrade(@Valid @RequestBody GradeRecordRequest request) {
         GradeRecordResponse response = gradeService.recordGrade(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);

@@ -19,7 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/student/registrations")
+@RequestMapping({"/api/v1/student/registrations", "/api/v1/registration"})
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('STUDENT')")
 public class StudentRegistrationController {
@@ -43,6 +43,15 @@ public class StudentRegistrationController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/enroll")
+    public ResponseEntity<ApiResponse<EnrollmentResponse>> enrollAlias(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody EnrollmentRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return enroll(userDetails, request, servletRequest);
+    }
+
     /**
      * UC-15: Hủy Đăng ký Lớp học phần (Drop Section)
      */
@@ -59,10 +68,19 @@ public class StudentRegistrationController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/drop")
+    public ResponseEntity<ApiResponse<EnrollmentResponse>> dropAlias(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody EnrollmentRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return drop(userDetails, request.getSectionId(), servletRequest);
+    }
+
     /**
      * UC-16: Xem Thời khóa biểu & Danh sách Lớp đã đăng ký thành công
      */
-    @GetMapping("/active")
+    @GetMapping({"/active", "/my-schedule"})
     public ResponseEntity<ApiResponse<ActiveRegistrationsResponse>> getActiveRegistrations(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam Long semesterId

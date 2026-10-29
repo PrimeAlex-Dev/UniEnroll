@@ -24,7 +24,7 @@ public class AcademicSemesterController {
      * UC-08: Khởi tạo Học kỳ mới
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<SemesterResponse>> createSemester(@Valid @RequestBody SemesterRequest request) {
         SemesterResponse response = semesterService.createSemester(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);

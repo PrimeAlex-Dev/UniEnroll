@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/courses")
+@RequestMapping({"/api/v1/courses", "/api/v1/curriculum/courses", "/api/v1/academic/courses"})
 @RequiredArgsConstructor
 public class CourseController {
 
@@ -25,7 +25,7 @@ public class CourseController {
      * UC-06: Tạo mới Môn học
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@Valid @RequestBody CourseRequest request) {
         CourseResponse response = courseService.createCourse(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
@@ -35,7 +35,7 @@ public class CourseController {
      * UC-06: Cập nhật thông tin Môn học
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(
             @PathVariable Long id,
             @Valid @RequestBody CourseRequest request
@@ -78,7 +78,7 @@ public class CourseController {
      * UC-07: Thiết lập Điều kiện Môn học Tiên quyết (Gán môn tiên quyết cho môn mục tiêu)
      */
     @PostMapping("/{id}/prerequisites")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<List<CourseSummaryDto>>> assignPrerequisites(
             @PathVariable Long id,
             @Valid @RequestBody PrerequisiteAssignmentRequest request
@@ -101,7 +101,7 @@ public class CourseController {
      * UC-07: Hủy quan hệ môn tiên quyết
      */
     @DeleteMapping("/{id}/prerequisites/{prerequisiteCourseId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<Void>> removePrerequisite(
             @PathVariable Long id,
             @PathVariable Long prerequisiteCourseId

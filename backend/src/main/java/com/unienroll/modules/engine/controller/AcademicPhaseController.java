@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/academic/registration-phases")
+@RequestMapping({"/api/v1/academic/registration-phases", "/api/v1/academic/phases"})
 @RequiredArgsConstructor
 public class AcademicPhaseController {
 
@@ -24,15 +24,26 @@ public class AcademicPhaseController {
      * UC-12: Thiết lập Đợt mở cổng Đăng ký học phần (BR-01)
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<RegistrationPhaseResponse>> createPhase(@Valid @RequestBody RegistrationPhaseRequest request) {
         RegistrationPhaseResponse response = phaseService.createPhase(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
     }
 
     /**
-     * UC-12: Xem danh sách các đợt mở cổng theo học kỳ
+     * UC-12: Xem danh sách các đợt mở cổng
      */
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<RegistrationPhaseResponse>>> getPhases(
+            @RequestParam(required = false) Long semesterId
+    ) {
+        List<RegistrationPhaseResponse> response = semesterId != null
+                ? phaseService.getPhasesBySemester(semesterId)
+                : phaseService.getAllPhases();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @GetMapping("/semester/{semesterId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<RegistrationPhaseResponse>>> getPhasesBySemester(@PathVariable Long semesterId) {

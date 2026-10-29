@@ -53,6 +53,7 @@ public class CourseSectionService {
         LecturerProfile lecturer = null;
         if (request.getLecturerId() != null) {
             lecturer = lecturerRepository.findById(request.getLecturerId())
+                    .or(() -> lecturerRepository.findByUserId(request.getLecturerId()))
                     .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy giảng viên với ID: " + request.getLecturerId()));
         }
 
@@ -199,6 +200,23 @@ public class CourseSectionService {
         return sectionRepository.findBySemesterId(semesterId).stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CourseSectionResponse> getAllSections() {
+        return sectionRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional
+    public CourseSectionResponse cancelSection(Long sectionId) {
+        CourseSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lớp học phần với ID: " + sectionId));
+        section.setStatus(SectionStatus.CANCELLED);
+        CourseSection saved = sectionRepository.save(section);
+        log.info("Cancelled section id={}", sectionId);
+        return mapToResponse(saved);
     }
 
     /**

@@ -23,7 +23,7 @@ public class AcademicSectionController {
      * UC-09: Mở Lớp học phần Mới
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<CourseSectionResponse>> createSection(@Valid @RequestBody CourseSectionRequest request) {
         CourseSectionResponse response = sectionService.createSection(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
@@ -33,7 +33,7 @@ public class AcademicSectionController {
      * UC-10: Cấu hình Lịch học Chi tiết (Schedule Slots) cho Lớp học phần
      */
     @PostMapping("/{id}/schedules")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<CourseSectionResponse>> assignScheduleSlots(
             @PathVariable Long id,
             @Valid @RequestBody List<ScheduleSlotRequest> slotRequests
@@ -42,16 +42,50 @@ public class AcademicSectionController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/{id}/slots")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<CourseSectionResponse>> addSingleScheduleSlot(
+            @PathVariable Long id,
+            @Valid @RequestBody ScheduleSlotRequest slotRequest
+    ) {
+        CourseSectionResponse response = sectionService.assignScheduleSlots(id, List.of(slotRequest));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     /**
      * UC-11: Điều chỉnh Chỉ tiêu Sức chứa Lớp học phần (BR-02 & BR-09)
      */
     @PutMapping("/{id}/capacity")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<CourseSectionResponse>> updateCapacity(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCapacityRequest request
     ) {
         CourseSectionResponse response = sectionService.updateCapacity(id, request.getNewCapacity());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-11: Hủy Lớp học phần
+     */
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<CourseSectionResponse>> cancelSection(@PathVariable Long id) {
+        CourseSectionResponse response = sectionService.cancelSection(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Danh sách tất cả Lớp học phần (có thể lọc theo Học kỳ)
+     */
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<CourseSectionResponse>>> getSections(
+            @RequestParam(required = false) Long semesterId
+    ) {
+        List<CourseSectionResponse> response = semesterId != null
+                ? sectionService.getSectionsBySemester(semesterId)
+                : sectionService.getAllSections();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

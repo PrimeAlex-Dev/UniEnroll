@@ -30,4 +30,10 @@ public class CourseSectionRequest {
     @NotNull(message = "Sức chứa lớp học phần không được để trống")
     @Min(value = 1, message = "Sức chứa phải lớn hơn 0")
     private Integer capacity;
+
+    public void setMaxCapacity(Integer maxCapacity) {
+        if (this.capacity == null && maxCapacity != null) {
+            this.capacity = maxCapacity;
+        }
+    }
 }

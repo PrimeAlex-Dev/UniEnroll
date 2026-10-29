@@ -119,4 +119,88 @@ public class AdminUserService {
                 .status(updated.getStatus())
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<UserSummaryDto> getAllUsers(String roleStr, String statusStr, String keyword) {
+        Role targetRole = null;
+        if (StringUtils.hasText(roleStr)) {
+            String r = roleStr.trim().toUpperCase();
+            if (!r.startsWith("ROLE_")) {
+                r = "ROLE_" + r;
+            }
+            try {
+                targetRole = Role.valueOf(r);
+            } catch (IllegalArgumentException ignored) {
+                if ("ROLE_ACADEMIC_STAFF".equals(r)) {
+                    targetRole = Role.ROLE_STAFF;
+                }
+            }
+        }
+
+        UserStatus targetStatus = null;
+        if (StringUtils.hasText(statusStr)) {
+            try {
+                targetStatus = UserStatus.valueOf(statusStr.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        final Role filterRole = targetRole;
+        final UserStatus filterStatus = targetStatus;
+
+        java.util.List<User> users = userRepository.findAll();
+        return users.stream()
+                .filter(u -> filterRole == null || u.getRole() == filterRole)
+                .filter(u -> filterStatus == null || u.getStatus() == filterStatus)
+                .filter(u -> !StringUtils.hasText(keyword) ||
+                        u.getUsername().toLowerCase().contains(keyword.toLowerCase()) ||
+                        u.getEmail().toLowerCase().contains(keyword.toLowerCase()))
+                .map(u -> {
+                    String fullName = u.getUsername();
+                    java.util.Map<String, Object> stuMap = null;
+                    java.util.Map<String, Object> lecMap = null;
+                    java.util.Map<String, Object> stfMap = null;
+
+                    if (u.getStudentProfile() != null) {
+                        if (StringUtils.hasText(u.getStudentProfile().getFullName())) {
+                            fullName = u.getStudentProfile().getFullName();
+                        }
+                        stuMap = new java.util.HashMap<>();
+                        stuMap.put("id", u.getStudentProfile().getId());
+                        stuMap.put("studentProfileId", u.getStudentProfile().getId());
+                        stuMap.put("studentCode", u.getStudentProfile().getStudentCode());
+                        stuMap.put("major", u.getStudentProfile().getMajor() != null ? u.getStudentProfile().getMajor() : "CNTT");
+                        stuMap.put("cohort", u.getStudentProfile().getCohort());
+                    } else if (u.getLecturerProfile() != null) {
+                        if (StringUtils.hasText(u.getLecturerProfile().getFullName())) {
+                            fullName = u.getLecturerProfile().getFullName();
+                        }
+                        lecMap = new java.util.HashMap<>();
+                        lecMap.put("id", u.getLecturerProfile().getId());
+                        lecMap.put("lecturerProfileId", u.getLecturerProfile().getId());
+                        lecMap.put("lecturerCode", u.getLecturerProfile().getLecturerCode());
+                        lecMap.put("academicTitle", u.getLecturerProfile().getDepartmentName() != null ? u.getLecturerProfile().getDepartmentName() : "Giảng viên");
+                    } else if (u.getStaffProfile() != null) {
+                        if (StringUtils.hasText(u.getStaffProfile().getFullName())) {
+                            fullName = u.getStaffProfile().getFullName();
+                        }
+                        stfMap = new java.util.HashMap<>();
+                        stfMap.put("id", u.getStaffProfile().getId());
+                        stfMap.put("staffProfileId", u.getStaffProfile().getId());
+                        stfMap.put("staffCode", u.getStaffProfile().getStaffCode());
+                    }
+
+                    return UserSummaryDto.builder()
+                            .id(u.getId())
+                            .username(u.getUsername())
+                            .email(u.getEmail())
+                            .fullName(fullName)
+                            .role(u.getRole())
+                            .status(u.getStatus())
+                            .studentProfile(stuMap)
+                            .lecturerProfile(lecMap)
+                            .staffProfile(stfMap)
+                            .build();
+                })
+                .toList();
+    }
 }

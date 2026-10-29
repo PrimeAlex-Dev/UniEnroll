@@ -25,6 +25,18 @@ public class SemesterRequest {
     @Size(max = 100, message = "Tên học kỳ tối đa 100 ký tự")
     private String name;
 
+    public void setSemesterCode(String semesterCode) {
+        if (this.code == null && semesterCode != null) {
+            this.code = semesterCode;
+        }
+    }
+
+    public void setSemesterName(String semesterName) {
+        if (this.name == null && semesterName != null) {
+            this.name = semesterName;
+        }
+    }
+
     @NotNull(message = "Ngày bắt đầu không được để trống")
     private LocalDate startDate;
 

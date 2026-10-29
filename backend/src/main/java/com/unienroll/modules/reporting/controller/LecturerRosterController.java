@@ -23,7 +23,7 @@ public class LecturerRosterController {
     /**
      * UC-17: XEM DANH SÁCH SINH VIÊN LỚP HỌC PHẦN (CLASS ROSTER)
      */
-    @GetMapping("/sections/{sectionId}/students")
+    @GetMapping({"/sections/{sectionId}/students", "/sections/{sectionId}/roster"})
     @PreAuthorize("hasAnyRole('LECTURER', 'STAFF', 'ADMIN')")
     public ResponseEntity<ApiResponse<ClassRosterResponse>> getClassRoster(
             @PathVariable Long sectionId,

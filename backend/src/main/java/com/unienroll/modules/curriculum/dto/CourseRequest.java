@@ -36,4 +36,27 @@ public class CourseRequest {
 
     @Size(max = 1000, message = "Mô tả tối đa 1000 ký tự")
     private String description;
+
+    public void setCourseCode(String courseCode) {
+        if (this.code == null && courseCode != null) {
+            this.code = courseCode;
+        }
+    }
+
+    public void setCourseName(String courseName) {
+        if (this.name == null && courseName != null) {
+            this.name = courseName;
+        }
+    }
+
+    public void setCredits(Integer credits) {
+        if (credits != null) {
+            if (this.theoryCredits == null) {
+                this.theoryCredits = credits;
+            }
+            if (this.practicalCredits == null) {
+                this.practicalCredits = 0;
+            }
+        }
+    }
 }

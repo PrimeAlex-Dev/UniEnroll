@@ -23,4 +23,16 @@ public class CourseResponse {
     private String departmentName;
     private String description;
     private List<CourseSummaryDto> prerequisiteCourses;
+
+    public String getCourseCode() {
+        return this.code;
+    }
+
+    public String getCourseName() {
+        return this.name;
+    }
+
+    public Integer getCredits() {
+        return this.totalCredits;
+    }
 }

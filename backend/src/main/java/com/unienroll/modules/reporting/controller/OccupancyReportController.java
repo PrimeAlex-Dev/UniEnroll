@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/academic/reports")
+@RequestMapping({"/api/v1/academic/reports", "/api/v1/reports"})
 @RequiredArgsConstructor
 public class OccupancyReportController {
 
@@ -22,7 +22,7 @@ public class OccupancyReportController {
      * UC-18: BÁO CÁO THỐNG KÊ TỶ LỆ LẤP ĐẦY LỚP HỌC PHẦN (OCCUPANCY DASHBOARD)
      */
     @GetMapping("/occupancy")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<OccupancyDashboardResponse>> getOccupancyReport(
             @RequestParam Long semesterId
     ) {

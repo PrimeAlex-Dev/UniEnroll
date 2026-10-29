@@ -54,6 +54,13 @@ public class RegistrationPhaseService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<RegistrationPhaseResponse> getAllPhases() {
+        return phaseRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
     /**
      * BR-01: Kiểm tra xem thời điểm giao dịch có nằm trong đợt đăng ký hợp lệ của sinh viên hay không
      */

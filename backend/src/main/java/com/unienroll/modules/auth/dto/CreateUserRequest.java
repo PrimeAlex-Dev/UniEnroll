@@ -43,6 +43,12 @@ public class CreateUserRequest {
     private String lecturerCode;
     private String departmentName;
 
+    public void setAcademicTitle(String academicTitle) {
+        if (this.departmentName == null && academicTitle != null) {
+            this.departmentName = academicTitle;
+        }
+    }
+
     // Staff fields
     private String staffCode;
 }

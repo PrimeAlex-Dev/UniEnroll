@@ -20,4 +20,12 @@ public class SemesterResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private SemesterStatus status;
+
+    public String getSemesterCode() {
+        return this.code;
+    }
+
+    public String getSemesterName() {
+        return this.name;
+    }
 }

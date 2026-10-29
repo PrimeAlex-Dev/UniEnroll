@@ -24,7 +24,7 @@ public class AcademicRoomController {
      * UC-08: Thêm mới Phòng học
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<ApiResponse<RoomResponse>> createRoom(@Valid @RequestBody RoomRequest request) {
         RoomResponse response = roomService.createRoom(request);
         return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.CREATED);
