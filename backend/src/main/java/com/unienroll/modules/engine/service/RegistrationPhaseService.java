@@ -61,6 +61,56 @@ public class RegistrationPhaseService {
                 .toList();
     }
 
+    @Transactional
+    public RegistrationPhaseResponse updatePhase(Long id, RegistrationPhaseRequest request) {
+        RegistrationPhase phase = phaseRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy đợt đăng ký với ID: " + id));
+
+        if (!request.getStartTime().isBefore(request.getEndTime())) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED, "Thời gian bắt đầu đợt đăng ký phải trước thời gian kết thúc");
+        }
+
+        if (request.getSemesterId() != null && !phase.getSemester().getId().equals(request.getSemesterId())) {
+            Semester semester = semesterRepository.findById(request.getSemesterId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy học kỳ với ID: " + request.getSemesterId()));
+            phase.setSemester(semester);
+        }
+
+        phase.setName(request.getName().trim());
+        phase.setStartTime(request.getStartTime());
+        phase.setEndTime(request.getEndTime());
+        phase.setTargetCohort(StringUtils.hasText(request.getTargetCohort()) ? request.getTargetCohort().trim() : null);
+
+        RegistrationPhase updated = phaseRepository.save(phase);
+        log.info("Updated registration phase id={}, name={}", id, updated.getName());
+        return mapToResponse(updated);
+    }
+
+    @Transactional
+    public RegistrationPhaseResponse closePhase(Long id) {
+        RegistrationPhase phase = phaseRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy đợt đăng ký với ID: " + id));
+
+        phase.setEndTime(Instant.now());
+        RegistrationPhase updated = phaseRepository.save(phase);
+        log.info("Force closed registration phase id={}", id);
+        return mapToResponse(updated);
+    }
+
+    @Transactional
+    public void deletePhase(Long id) {
+        RegistrationPhase phase = phaseRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy đợt đăng ký với ID: " + id));
+
+        if (Instant.now().isAfter(phase.getStartTime())) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED,
+                    "Không thể xóa đợt đăng ký đã bắt đầu hoặc đã kết thúc. Vui lòng sử dụng tính năng Đóng cổng khẩn cấp.");
+        }
+
+        phaseRepository.delete(phase);
+        log.info("Deleted registration phase id={}", id);
+    }
+
     /**
      * BR-01: Kiểm tra xem thời điểm giao dịch có nằm trong đợt đăng ký hợp lệ của sinh viên hay không
      */

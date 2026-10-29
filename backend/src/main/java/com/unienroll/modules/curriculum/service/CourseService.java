@@ -9,6 +9,9 @@ import com.unienroll.modules.curriculum.entity.Course;
 import com.unienroll.modules.curriculum.entity.Department;
 import com.unienroll.modules.curriculum.repository.CourseRepository;
 import com.unienroll.modules.curriculum.repository.DepartmentRepository;
+import com.unienroll.modules.curriculum.repository.PrerequisiteConditionRepository;
+import com.unienroll.modules.reporting.repository.GradeRecordRepository;
+import com.unienroll.modules.scheduling.repository.CourseSectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,9 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final DepartmentRepository departmentRepository;
     private final PrerequisiteService prerequisiteService;
+    private final PrerequisiteConditionRepository prerequisiteConditionRepository;
+    private final CourseSectionRepository sectionRepository;
+    private final GradeRecordRepository gradeRecordRepository;
 
     @Transactional
     public CourseResponse createCourse(CourseRequest request) {
@@ -104,6 +110,28 @@ public class CourseService {
         return courseRepository.findByDepartmentId(departmentId).stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Transactional
+    public void deleteCourse(Long id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy môn học với ID: " + id));
+
+        if (sectionRepository.existsByCourseId(id)) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED, "Không thể xóa môn học đã được mở lớp học phần");
+        }
+
+        if (gradeRecordRepository.existsByCourseId(id)) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED, "Không thể xóa môn học đã có bản ghi điểm của sinh viên");
+        }
+
+        if (!prerequisiteConditionRepository.findByPrerequisiteCourseId(id).isEmpty()) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED, "Không thể xóa môn học đang là điều kiện tiên quyết của môn học khác");
+        }
+
+        prerequisiteConditionRepository.deleteByTargetCourseId(id);
+        courseRepository.delete(course);
+        log.info("Deleted course id={}, code={}", id, course.getCode());
     }
 
     private CourseResponse mapToResponse(Course course) {

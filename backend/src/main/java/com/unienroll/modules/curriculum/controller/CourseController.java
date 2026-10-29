@@ -109,4 +109,14 @@ public class CourseController {
         prerequisiteService.removePrerequisite(id, prerequisiteCourseId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
+
+    /**
+     * UC-06: Xóa Môn học
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteCourse(@PathVariable Long id) {
+        courseService.deleteCourse(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

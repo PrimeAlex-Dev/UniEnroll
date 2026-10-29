@@ -19,4 +19,6 @@ public interface GradeRecordRepository extends JpaRepository<GradeRecord, Long> 
     Optional<GradeRecord> findByStudentIdAndCourseId(Long studentId, Long courseId);
 
     boolean existsByStudentIdAndCourseIdAndStatus(Long studentId, Long courseId, GradeStatus status);
+
+    boolean existsByCourseId(Long courseId);
 }

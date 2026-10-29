@@ -25,4 +25,6 @@ public interface EnrollmentRecordRepository extends JpaRepository<EnrollmentReco
 
     @EntityGraph(attributePaths = {"student", "section", "course"})
     List<EnrollmentRecord> findBySectionIdAndStatus(Long sectionId, EnrollmentStatus status);
+
+    boolean existsBySectionId(Long sectionId);
 }

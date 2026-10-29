@@ -3,6 +3,7 @@ package com.unienroll.modules.scheduling.controller;
 import com.unienroll.common.response.ApiResponse;
 import com.unienroll.modules.scheduling.dto.SemesterRequest;
 import com.unienroll.modules.scheduling.dto.SemesterResponse;
+import com.unienroll.modules.scheduling.entity.SemesterStatus;
 import com.unienroll.modules.scheduling.service.SemesterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,5 +59,41 @@ public class AcademicSemesterController {
     public ResponseEntity<ApiResponse<SemesterResponse>> getSemesterById(@PathVariable Long id) {
         SemesterResponse response = semesterService.getSemesterById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-08: Cập nhật thông tin học kỳ
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<SemesterResponse>> updateSemester(
+            @PathVariable Long id,
+            @Valid @RequestBody SemesterRequest request
+    ) {
+        SemesterResponse response = semesterService.updateSemester(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-08: Thay đổi trạng thái học kỳ (PLANNED, ACTIVE, FINISHED, ARCHIVED)
+     */
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<SemesterResponse>> updateSemesterStatus(
+            @PathVariable Long id,
+            @RequestParam SemesterStatus status
+    ) {
+        SemesterResponse response = semesterService.updateSemesterStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-08: Xóa học kỳ
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteSemester(@PathVariable Long id) {
+        semesterService.deleteSemester(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

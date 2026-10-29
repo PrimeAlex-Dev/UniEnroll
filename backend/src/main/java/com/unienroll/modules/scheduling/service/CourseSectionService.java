@@ -6,6 +6,7 @@ import com.unienroll.modules.auth.entity.LecturerProfile;
 import com.unienroll.modules.auth.repository.LecturerProfileRepository;
 import com.unienroll.modules.curriculum.entity.Course;
 import com.unienroll.modules.curriculum.repository.CourseRepository;
+import com.unienroll.modules.engine.repository.EnrollmentRecordRepository;
 import com.unienroll.modules.scheduling.dto.*;
 import com.unienroll.modules.scheduling.entity.*;
 import com.unienroll.modules.scheduling.repository.CourseSectionRepository;
@@ -32,6 +33,7 @@ public class CourseSectionService {
     private final LecturerProfileRepository lecturerRepository;
     private final RoomRepository roomRepository;
     private final ScheduleSlotRepository scheduleSlotRepository;
+    private final EnrollmentRecordRepository enrollmentRecordRepository;
 
     /**
      * UC-09: Mở Lớp Học phần Mới
@@ -152,6 +154,99 @@ public class CourseSectionService {
     }
 
     /**
+     * UC-10: Thêm 1 buổi học vào lịch hiện tại của lớp
+     */
+    @Transactional
+    public CourseSectionResponse addSingleScheduleSlot(Long sectionId, ScheduleSlotRequest req) {
+        CourseSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lớp học phần với ID: " + sectionId));
+
+        if (req.getStartPeriod() > req.getEndPeriod()) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED, "Tiết bắt đầu phải nhỏ hơn hoặc bằng tiết kết thúc");
+        }
+
+        Room room = roomRepository.findById(req.getRoomId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy phòng học với ID: " + req.getRoomId()));
+
+        if (room.getCapacity() < section.getCapacity()) {
+            throw new BusinessException(ErrorCode.ERR_ROOM_CAPACITY_INSUFFICIENT,
+                    String.format("Phòng %s (sức chứa %d) không đủ cho lớp học phần (chỉ tiêu %d)",
+                            room.getRoomNumber(), room.getCapacity(), section.getCapacity()));
+        }
+
+        for (ScheduleSlot existing : section.getScheduleSlots()) {
+            if (existing.getDayOfWeek().equals(req.getDayOfWeek())
+                    && isTimeOverlap(req.getStartPeriod(), req.getEndPeriod(), existing.getStartPeriod(), existing.getEndPeriod())) {
+                throw new BusinessException(ErrorCode.ERR_TIMETABLE_COLLISION,
+                        String.format("Lớp này đã có lịch vào %s (Tiết %d-%d)",
+                                req.getDayOfWeek(), existing.getStartPeriod(), existing.getEndPeriod()));
+            }
+        }
+
+        List<ScheduleSlot> roomSlots = scheduleSlotRepository.findExistingSlotsByRoom(
+                section.getSemester().getId(), room.getId(), req.getDayOfWeek());
+        for (ScheduleSlot existing : roomSlots) {
+            if (existing.getSection().getId().equals(section.getId())) {
+                continue;
+            }
+            if (isTimeOverlap(req.getStartPeriod(), req.getEndPeriod(), existing.getStartPeriod(), existing.getEndPeriod())) {
+                throw new BusinessException(ErrorCode.ERR_ROOM_SCHEDULE_COLLISION,
+                        String.format("Phòng %s bị trùng lịch với lớp '%s' vào %s (Tiết %d-%d)",
+                                room.getRoomNumber(), existing.getSection().getSectionCode(),
+                                req.getDayOfWeek(), existing.getStartPeriod(), existing.getEndPeriod()));
+            }
+        }
+
+        if (section.getLecturer() != null) {
+            List<ScheduleSlot> lecturerSlots = scheduleSlotRepository.findExistingSlotsByLecturer(
+                    section.getSemester().getId(), section.getLecturer().getId(), req.getDayOfWeek());
+            for (ScheduleSlot existing : lecturerSlots) {
+                if (existing.getSection().getId().equals(section.getId())) {
+                    continue;
+                }
+                if (isTimeOverlap(req.getStartPeriod(), req.getEndPeriod(), existing.getStartPeriod(), existing.getEndPeriod())) {
+                    throw new BusinessException(ErrorCode.ERR_LECTURER_SCHEDULE_COLLISION,
+                            String.format("Giảng viên %s bị trùng lịch dạy với lớp '%s' vào %s (Tiết %d-%d)",
+                                    section.getLecturer().getFullName(), existing.getSection().getSectionCode(),
+                                    req.getDayOfWeek(), existing.getStartPeriod(), existing.getEndPeriod()));
+                }
+            }
+        }
+
+        ScheduleSlot slot = ScheduleSlot.builder()
+                .section(section)
+                .room(room)
+                .dayOfWeek(req.getDayOfWeek())
+                .startPeriod(req.getStartPeriod())
+                .endPeriod(req.getEndPeriod())
+                .build();
+        section.getScheduleSlots().add(slot);
+
+        CourseSection updated = sectionRepository.save(section);
+        log.info("Added schedule slot to section id={}, day={}, periods={}-{}",
+                sectionId, req.getDayOfWeek(), req.getStartPeriod(), req.getEndPeriod());
+        return mapToResponse(updated);
+    }
+
+    /**
+     * UC-10: Xóa 1 buổi học khỏi lớp học phần
+     */
+    @Transactional
+    public CourseSectionResponse deleteScheduleSlot(Long sectionId, Long slotId) {
+        CourseSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lớp học phần với ID: " + sectionId));
+
+        boolean removed = section.getScheduleSlots().removeIf(slot -> slot.getId() != null && slot.getId().equals(slotId));
+        if (!removed) {
+            throw new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lịch học với ID: " + slotId);
+        }
+
+        CourseSection updated = sectionRepository.save(section);
+        log.info("Deleted schedule slot id={} from section id={}", slotId, sectionId);
+        return mapToResponse(updated);
+    }
+
+    /**
      * UC-11: Điều chỉnh Sức chứa Lớp học phần (BR-02 & BR-09)
      */
     @Transactional
@@ -217,6 +312,85 @@ public class CourseSectionService {
         CourseSection saved = sectionRepository.save(section);
         log.info("Cancelled section id={}", sectionId);
         return mapToResponse(saved);
+    }
+
+    /**
+     * UC-09: Cập nhật thông tin Lớp học phần (Mã lớp, Giảng viên, Sức chứa)
+     */
+    @Transactional
+    public CourseSectionResponse updateSection(Long sectionId, CourseSectionRequest request) {
+        CourseSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lớp học phần với ID: " + sectionId));
+
+        String newCode = request.getSectionCode().toUpperCase().trim();
+        if (!section.getSectionCode().equalsIgnoreCase(newCode)
+                && sectionRepository.existsBySemesterIdAndSectionCode(section.getSemester().getId(), newCode)) {
+            throw new BusinessException(ErrorCode.ERR_SECTION_CODE_DUPLICATE,
+                    String.format("Mã lớp học phần '%s' đã tồn tại trong học kỳ này", newCode));
+        }
+
+        if (request.getLecturerId() != null) {
+            LecturerProfile newLecturer = lecturerRepository.findById(request.getLecturerId())
+                    .or(() -> lecturerRepository.findByUserId(request.getLecturerId()))
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy giảng viên với ID: " + request.getLecturerId()));
+
+            for (ScheduleSlot slot : section.getScheduleSlots()) {
+                List<ScheduleSlot> lecturerSlots = scheduleSlotRepository.findExistingSlotsByLecturer(
+                        section.getSemester().getId(), newLecturer.getId(), slot.getDayOfWeek());
+                for (ScheduleSlot existing : lecturerSlots) {
+                    if (existing.getSection().getId().equals(section.getId())) {
+                        continue;
+                    }
+                    if (isTimeOverlap(slot.getStartPeriod(), slot.getEndPeriod(), existing.getStartPeriod(), existing.getEndPeriod())) {
+                        throw new BusinessException(ErrorCode.ERR_LECTURER_SCHEDULE_COLLISION,
+                                String.format("Giảng viên %s bị trùng lịch dạy với lớp '%s' vào %s (Tiết %d-%d)",
+                                        newLecturer.getFullName(), existing.getSection().getSectionCode(),
+                                        slot.getDayOfWeek(), existing.getStartPeriod(), existing.getEndPeriod()));
+                    }
+                }
+            }
+            section.setLecturer(newLecturer);
+        } else {
+            section.setLecturer(null);
+        }
+
+        if (request.getCapacity() != null && request.getCapacity() > 0) {
+            if (request.getCapacity() < section.getEnrolledCount()) {
+                throw new BusinessException(ErrorCode.ERR_CAPACITY_LOWER_THAN_ENROLLED,
+                        String.format("Không thể giảm sức chứa (%d) xuống thấp hơn số sinh viên hiện đã đăng ký (%d)",
+                                request.getCapacity(), section.getEnrolledCount()));
+            }
+            for (ScheduleSlot slot : section.getScheduleSlots()) {
+                if (slot.getRoom() != null && slot.getRoom().getCapacity() < request.getCapacity()) {
+                    throw new BusinessException(ErrorCode.ERR_ROOM_CAPACITY_INSUFFICIENT,
+                            String.format("Sức chứa mới (%d) vượt quá sức chứa phòng %s (%d)",
+                                    request.getCapacity(), slot.getRoom().getRoomNumber(), slot.getRoom().getCapacity()));
+                }
+            }
+            section.setCapacity(request.getCapacity());
+        }
+
+        section.setSectionCode(newCode);
+        CourseSection updated = sectionRepository.save(section);
+        log.info("Updated section id={}, code={}", sectionId, newCode);
+        return mapToResponse(updated);
+    }
+
+    /**
+     * UC-09: Xóa Lớp học phần rỗng
+     */
+    @Transactional
+    public void deleteSection(Long sectionId) {
+        CourseSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy lớp học phần với ID: " + sectionId));
+
+        if (section.getEnrolledCount() > 0 || enrollmentRecordRepository.existsBySectionId(sectionId)) {
+            throw new BusinessException(ErrorCode.ERR_VALIDATION_FAILED,
+                    "Không thể xóa lớp học phần đã có sinh viên đăng ký. Vui lòng sử dụng tính năng Hủy lớp.");
+        }
+
+        sectionRepository.delete(section);
+        log.info("Deleted course section id={}, code={}", sectionId, section.getSectionCode());
     }
 
     /**

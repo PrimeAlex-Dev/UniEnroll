@@ -49,4 +49,27 @@ public class AcademicRoomController {
         RoomResponse response = roomService.getRoomById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    /**
+     * UC-08: Cập nhật thông tin phòng học
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<RoomResponse>> updateRoom(
+            @PathVariable Long id,
+            @Valid @RequestBody RoomRequest request
+    ) {
+        RoomResponse response = roomService.updateRoom(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-08: Xóa phòng học
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteRoom(@PathVariable Long id) {
+        roomService.deleteRoom(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

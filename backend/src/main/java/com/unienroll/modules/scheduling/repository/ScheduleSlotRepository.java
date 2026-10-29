@@ -17,6 +17,11 @@ public interface ScheduleSlotRepository extends JpaRepository<ScheduleSlot, Long
     List<ScheduleSlot> findBySectionId(Long sectionId);
 
     @EntityGraph(attributePaths = {"room", "section"})
+    List<ScheduleSlot> findByRoomId(Long roomId);
+
+    boolean existsByRoomId(Long roomId);
+
+    @EntityGraph(attributePaths = {"room", "section"})
     @Query("SELECT s FROM ScheduleSlot s WHERE s.section.semester.id = :semesterId AND s.room.id = :roomId AND s.dayOfWeek = :dayOfWeek")
     List<ScheduleSlot> findExistingSlotsByRoom(
             @Param("semesterId") Long semesterId,

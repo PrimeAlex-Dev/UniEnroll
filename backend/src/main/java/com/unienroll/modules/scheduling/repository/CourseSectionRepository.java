@@ -17,6 +17,10 @@ public interface CourseSectionRepository extends JpaRepository<CourseSection, Lo
 
     boolean existsBySemesterIdAndSectionCode(Long semesterId, String sectionCode);
 
+    boolean existsByCourseId(Long courseId);
+
+    boolean existsBySemesterId(Long semesterId);
+
     @EntityGraph(attributePaths = {"course", "semester", "lecturer", "scheduleSlots", "scheduleSlots.room"})
     @Override
     Optional<CourseSection> findById(Long id);

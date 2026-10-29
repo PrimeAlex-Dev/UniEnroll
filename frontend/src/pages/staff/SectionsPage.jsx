@@ -8,7 +8,7 @@ import Table from '../../components/common/Table';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import BackendErrorAlert from '../../components/common/BackendErrorAlert';
-import { Layers, Plus, CalendarPlus, Edit3, XCircle, RefreshCw } from 'lucide-react';
+import { Layers, Plus, CalendarPlus, Edit3, XCircle, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 
 const SectionsPage = () => {
   const [sections, setSections] = useState([]);
@@ -32,7 +32,22 @@ const SectionsPage = () => {
     lecturerId: '',
   });
 
-  // Modal Add Schedule Slot (UC-10)
+  // Modal Edit Section (UC-09)
+  const [editSection, setEditSection] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [editForm, setEditForm] = useState({
+    sectionCode: '',
+    capacity: '',
+    lecturerId: '',
+  });
+
+  // Modal Delete Section (UC-09)
+  const [deleteSection, setDeleteSection] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  // Modal Schedule Slots (UC-10)
   const [selectedSectionForSlot, setSelectedSectionForSlot] = useState(null);
   const [slotLoading, setSlotLoading] = useState(false);
   const [slotError, setSlotError] = useState(null);
@@ -77,6 +92,13 @@ const SectionsPage = () => {
     try {
       const res = await schedulingApi.getSections(semesterId ? Number(semesterId) : undefined);
       setSections(res.data || []);
+      // If slot modal is open, refresh selectedSectionForSlot with fresh data
+      if (selectedSectionForSlot) {
+        const refreshed = (res.data || []).find((s) => s.id === selectedSectionForSlot.id);
+        if (refreshed) {
+          setSelectedSectionForSlot(refreshed);
+        }
+      }
     } catch (err) {
       console.error(err);
       setError(err);
@@ -118,22 +140,90 @@ const SectionsPage = () => {
     }
   };
 
+  const handleOpenEdit = (s) => {
+    setEditSection(s);
+    setEditForm({
+      sectionCode: s.sectionCode || '',
+      capacity: String(s.capacity || s.maxCapacity || ''),
+      lecturerId: String(s.lecturerId || ''),
+    });
+    setEditError(null);
+  };
+
+  const handleUpdateSection = async (e) => {
+    e.preventDefault();
+    if (!editSection) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await schedulingApi.updateSection(editSection.id, {
+        sectionCode: editForm.sectionCode?.trim(),
+        capacity: editForm.capacity ? Number(editForm.capacity) : '',
+        lecturerId: editForm.lecturerId ? Number(editForm.lecturerId) : null,
+        semesterId: editSection.semesterId,
+        courseId: editSection.courseId,
+      });
+      setEditSection(null);
+      fetchSections(selectedSemesterId);
+    } catch (err) {
+      console.error('Update section failed:', err);
+      setEditError(err);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteSection = async () => {
+    if (!deleteSection) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await schedulingApi.deleteSection(deleteSection.id);
+      setDeleteSection(null);
+      fetchSections(selectedSemesterId);
+    } catch (err) {
+      console.error('Delete section failed:', err);
+      setDeleteError(err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleAddSlot = async (e) => {
     e.preventDefault();
     setSlotLoading(true);
     setSlotError(null);
     try {
-      await schedulingApi.addScheduleSlot(selectedSectionForSlot.id, {
+      const res = await schedulingApi.addScheduleSlot(selectedSectionForSlot.id, {
         roomId: slotForm.roomId ? Number(slotForm.roomId) : '',
         dayOfWeek: slotForm.dayOfWeek,
         startPeriod: slotForm.startPeriod ? Number(slotForm.startPeriod) : '',
         endPeriod: slotForm.endPeriod ? Number(slotForm.endPeriod) : '',
       });
-      setSelectedSectionForSlot(null);
+      if (res.data) {
+        setSelectedSectionForSlot(res.data);
+      }
       setSlotForm({ roomId: '', dayOfWeek: 'MONDAY', startPeriod: '1', endPeriod: '3' });
       fetchSections(selectedSemesterId);
     } catch (err) {
       console.error('Schedule slot failed (collision):', err);
+      setSlotError(err);
+    } finally {
+      setSlotLoading(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId) => {
+    setSlotLoading(true);
+    setSlotError(null);
+    try {
+      const res = await schedulingApi.deleteScheduleSlot(selectedSectionForSlot.id, slotId);
+      if (res.data) {
+        setSelectedSectionForSlot(res.data);
+      }
+      fetchSections(selectedSemesterId);
+    } catch (err) {
+      console.error('Delete schedule slot failed:', err);
       setSlotError(err);
     } finally {
       setSlotLoading(false);
@@ -151,80 +241,87 @@ const SectionsPage = () => {
       setSelectedSectionForCap(null);
       fetchSections(selectedSemesterId);
     } catch (err) {
-      console.error('Update capacity failed:', err);
+      console.error('Update capacity error (BR-02/BR-09):', err);
       setCapError(err);
     } finally {
       setCapLoading(false);
     }
   };
 
-  const handleCancelSection = async (section) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn hủy Lớp học phần ${section.sectionCode}?`)) return;
+  const handleCancelSection = async (s) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn HỦY Lớp học phần ${s.sectionCode}? Lớp sẽ chuyển trạng thái CANCELLED và thu hồi toàn bộ lịch học.`)) {
+      return;
+    }
     try {
-      await schedulingApi.cancelSection(section.id);
+      await schedulingApi.cancelSection(s.id);
       fetchSections(selectedSemesterId);
     } catch (err) {
+      console.error('Cancel section error:', err);
       setError(err);
     }
   };
 
   const columns = [
     {
-      header: 'Mã Lớp Học Phần',
+      header: 'Mã Lớp HP',
       render: (s) => (
         <div>
           <span className="font-mono font-bold text-indigo-700">{s.sectionCode}</span>
-          <div className="text-xs text-slate-400">ID: {s.id}</div>
+          <div className="text-[11px] text-slate-400">ID: {s.id}</div>
         </div>
       ),
     },
     {
-      header: 'Môn Học',
+      header: 'Môn Học & Tín Chỉ',
       render: (s) => (
         <div>
-          <div className="font-semibold text-slate-800">{s.courseName}</div>
-          <div className="text-xs font-mono text-slate-500">{s.courseCode} ({s.credits} TC)</div>
+          <span className="font-semibold text-slate-800">{s.courseName}</span>
+          <div className="font-mono text-xs text-slate-500">
+            {s.courseCode} • {s.totalCredits ?? 3} Tín chỉ
+          </div>
         </div>
       ),
     },
     {
-      header: 'Phòng Học',
+      header: 'Giảng Viên',
       render: (s) => (
-        <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-          {s.building} - P.{s.roomNumber}
+        <span className="text-xs text-slate-700 font-medium">
+          {s.lecturerName ? `GV. ${s.lecturerName}` : <span className="text-slate-400 italic">Chưa phân công</span>}
         </span>
       ),
     },
     {
       header: 'Sĩ Số / Sức Chứa',
       render: (s) => {
-        const isFull = s.enrolledCount >= s.maxCapacity;
+        const enrolled = s.enrolledCount || 0;
+        const cap = s.capacity || s.maxCapacity || 0;
+        const isFull = enrolled >= cap;
         return (
-          <div className="text-xs">
-            <span className={`font-mono font-bold ${isFull ? 'text-rose-600' : 'text-emerald-700'}`}>
-              {s.enrolledCount} / {s.maxCapacity}
+          <div className="text-xs font-mono">
+            <span className={`font-bold ${isFull ? 'text-rose-600' : 'text-emerald-700'}`}>
+              {enrolled}
             </span>
-            {isFull && (
-              <span className="ml-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-1 rounded">
-                HẾT CHỖ
-              </span>
-            )}
+            <span className="text-slate-400"> / {cap}</span>
           </div>
         );
       },
       align: 'center',
     },
     {
-      header: 'Lịch Học (Slots)',
+      header: 'Thời Khóa Biểu (Slots)',
       render: (s) => {
-        if (!s.scheduleSlots || s.scheduleSlots.length === 0) {
-          return <span className="text-xs text-amber-600 italic">Chưa xếp lịch</span>;
+        const slots = s.scheduleSlots || [];
+        if (slots.length === 0) {
+          return <span className="text-xs text-amber-600 font-mono italic">Chưa xếp lịch</span>;
         }
         return (
           <div className="space-y-1">
-            {s.scheduleSlots.map((slot, idx) => (
-              <div key={idx} className="text-[11px] font-mono text-slate-700">
-                • Thứ {slot.dayOfWeek} (Tiết {slot.startPeriod}-{slot.endPeriod}) - GV: {slot.lecturerName || `ID ${slot.lecturerId}`}
+            {slots.map((slot) => (
+              <div
+                key={slot.id}
+                className="text-[11px] font-mono bg-slate-50 text-slate-700 px-2 py-0.5 rounded border border-slate-200"
+              >
+                {slot.dayOfWeek} (T.{slot.startPeriod}-{slot.endPeriod}) • {slot.roomNumber || 'Chưa gán phòng'}
               </div>
             ))}
           </div>
@@ -244,7 +341,7 @@ const SectionsPage = () => {
             size="sm"
             variant="secondary"
             icon={CalendarPlus}
-            title="Thêm slot lịch học (Xung đột TKB sẽ ném lỗi)"
+            title="Quản lý lịch học"
             onClick={() => {
               setSelectedSectionForSlot(s);
               setSlotError(null);
@@ -256,24 +353,34 @@ const SectionsPage = () => {
             size="sm"
             variant="secondary"
             icon={Edit3}
-            title="Điều chỉnh sức chứa C_max"
-            onClick={() => {
-              setSelectedSectionForCap(s);
-              setNewCapacity(String(s.maxCapacity));
-              setCapError(null);
-            }}
+            title="Sửa thông tin lớp (Mã lớp, Giảng viên, Sức chứa)"
+            onClick={() => handleOpenEdit(s)}
           >
-            Sức chứa
+            Sửa
           </Button>
           {s.status !== 'CANCELLED' && (
             <Button
               size="sm"
-              variant="danger"
+              variant="secondary"
               icon={XCircle}
               title="Hủy lớp học phần"
               onClick={() => handleCancelSection(s)}
             >
               Hủy
+            </Button>
+          )}
+          {s.enrolledCount === 0 && (
+            <Button
+              size="sm"
+              variant="danger"
+              icon={Trash2}
+              title="Xóa lớp học phần rỗng"
+              onClick={() => {
+                setDeleteSection(s);
+                setDeleteError(null);
+              }}
+            >
+              Xóa
             </Button>
           )}
         </div>
@@ -291,7 +398,7 @@ const SectionsPage = () => {
             <span>Quản lý Lớp học phần & Xếp lịch (UC-09, UC-10, UC-11)</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Mở lớp, kiểm soát sức chứa phòng (BR-09), phát hiện xung đột lịch giảng viên & phòng học
+            Mở lớp, chỉnh sửa giảng viên, xếp lịch học từng buổi và kiểm soát sức chứa phòng học
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -321,18 +428,20 @@ const SectionsPage = () => {
           <select
             value={selectedSemesterId}
             onChange={(e) => setSelectedSemesterId(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded border border-slate-300 font-semibold text-slate-900 bg-white"
+            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 font-medium text-slate-900 bg-white min-w-[240px]"
           >
-            {semesters.map((sem) => (
-              <option key={sem.id} value={sem.id}>
-                {sem.code || sem.semesterCode} - {sem.name || sem.semesterName}
+            {semesters.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.code || s.semesterCode} - {s.name || s.semesterName}
               </option>
             ))}
           </select>
+          <span className="text-xs text-slate-400 font-mono">
+            Tổng cộng: {sections.length} lớp học phần trong kỳ
+          </span>
         </div>
       </Card>
 
-      {/* Sections Table */}
       <Card title={`Danh sách Lớp học phần (${sections.length})`}>
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">Đang tải danh sách lớp học phần...</div>
@@ -341,11 +450,11 @@ const SectionsPage = () => {
         )}
       </Card>
 
-      {/* Modal Open Section (UC-09) */}
+      {/* Modal Create Section (UC-09) */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Mở Lớp Học Phần Mới (UC-09 - Kiểm tra sức chứa phòng BR-09)"
+        title="Mở Lớp Học Phần Mới (UC-09)"
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setShowCreateModal(false)}>
@@ -367,10 +476,25 @@ const SectionsPage = () => {
               onChange={(e) => setSectionForm({ ...sectionForm, courseId: e.target.value })}
               className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-medium text-slate-900 bg-white"
             >
-              <option value="">-- Chọn Môn học --</option>
+              <option value="">-- Chọn Môn học mở lớp --</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.code || c.courseCode} - {c.name || c.courseName} ({c.totalCredits ?? (c.credits ?? 3)} TC)
+                  {c.code || c.courseCode} - {c.name || c.courseName} ({c.totalCredits || c.credits || 3} TC)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Học Kỳ Áp Dụng *</label>
+            <select
+              value={sectionForm.semesterId || selectedSemesterId}
+              onChange={(e) => setSectionForm({ ...sectionForm, semesterId: e.target.value })}
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+            >
+              {semesters.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code || s.semesterCode} - {s.name || s.semesterName}
                 </option>
               ))}
             </select>
@@ -378,146 +502,286 @@ const SectionsPage = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Mã Lớp Học Phần *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Mã Lớp Học Phần (Unique) *
+              </label>
               <input
                 type="text"
                 value={sectionForm.sectionCode}
                 onChange={(e) => setSectionForm({ ...sectionForm, sectionCode: e.target.value })}
-                placeholder="ví dụ: CS101_01"
+                placeholder="ví dụ: CS101.N01, MATH201.01"
                 className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Học Kỳ *</label>
-              <select
-                value={sectionForm.semesterId || selectedSemesterId}
-                onChange={(e) => setSectionForm({ ...sectionForm, semesterId: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
-              >
-                {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.code || s.semesterCode} - {s.name || s.semesterName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Sức Chứa Lớp (Chỉ tiêu) *
+                Chỉ Tiêu Sức Chứa (C_max) *
               </label>
               <input
                 type="number"
                 min="1"
                 value={sectionForm.capacity}
                 onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })}
-                placeholder="ví dụ: 40 hoặc 50"
+                placeholder="ví dụ: 50 (sinh viên)"
                 className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Giảng Viên Phụ Trách</label>
-              <select
-                value={sectionForm.lecturerId}
-                onChange={(e) => setSectionForm({ ...sectionForm, lecturerId: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
-              >
-                <option value="">-- Phân công giảng viên (tùy chọn) --</option>
-                {lecturers.map((lec) => {
-                  const lId = lec.lecturerProfile?.id || lec.lecturerProfile?.lecturerProfileId || lec.id;
-                  return (
-                    <option key={lec.id} value={lId}>
-                      {lec.fullName} ({lec.username})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Phân Công Giảng Viên
+            </label>
+            <select
+              value={sectionForm.lecturerId}
+              onChange={(e) => setSectionForm({ ...sectionForm, lecturerId: e.target.value })}
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+            >
+              <option value="">-- Phân công giảng viên (tùy chọn) --</option>
+              {lecturers.map((lec) => {
+                const lId = lec.lecturerProfile?.id || lec.lecturerProfile?.lecturerProfileId || lec.id;
+                return (
+                  <option key={lec.id} value={lId}>
+                    {lec.fullName} ({lec.username})
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
       </Modal>
 
-      {/* Modal Add Schedule Slot (UC-10 - Collision check) */}
+      {/* Modal Edit Section (UC-09) */}
       <Modal
-        isOpen={!!selectedSectionForSlot}
-        onClose={() => setSelectedSectionForSlot(null)}
-        title={`Xếp Lịch Học: [${selectedSectionForSlot?.sectionCode}] ${selectedSectionForSlot?.courseName}`}
+        isOpen={!!editSection}
+        onClose={() => setEditSection(null)}
+        title={`Chỉnh sửa Lớp: ${editSection?.sectionCode} (${editSection?.courseName})`}
         footer={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setSelectedSectionForSlot(null)}>
+            <Button variant="secondary" size="sm" onClick={() => setEditSection(null)}>
               Hủy
             </Button>
-            <Button variant="primary" size="sm" loading={slotLoading} onClick={handleAddSlot}>
-              Lưu Lịch Học
+            <Button variant="primary" size="sm" loading={editLoading} onClick={handleUpdateSection}>
+              Cập nhật
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          {slotError && <BackendErrorAlert error={slotError} onClose={() => setSlotError(null)} />}
+          {editError && <BackendErrorAlert error={editError} onClose={() => setEditError(null)} />}
 
-          <div className="p-3 bg-amber-50 rounded border border-amber-200 text-xs text-amber-800">
-            <strong>Kiểm Tra Xung Đột Lịch (BR-03 & Conflict Algorithm):</strong> Nếu phòng học hoặc giảng viên đã có lịch trong cùng khung giờ, Backend sẽ trả về lỗi <code className="font-bold text-rose-700">ERR_ROOM_SCHEDULE_CONFLICT</code> hoặc <code className="font-bold text-rose-700">ERR_LECTURER_SCHEDULE_CONFLICT</code>. Sức chứa phòng phải lớn hơn hoặc bằng sức chứa lớp ({selectedSectionForSlot?.capacity || selectedSectionForSlot?.maxCapacity || 0} chỗ).
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Mã Lớp Học Phần *
+              </label>
+              <input
+                type="text"
+                value={editForm.sectionCode}
+                onChange={(e) => setEditForm({ ...editForm, sectionCode: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Chỉ Tiêu Sức Chứa (C_max) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={editForm.capacity}
+                onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
+              />
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Đã đăng ký: {editSection?.enrolledCount || 0} SV
+              </p>
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Phòng Học *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Phân Công Giảng Viên
+            </label>
             <select
-              value={slotForm.roomId}
-              onChange={(e) => setSlotForm({ ...slotForm, roomId: e.target.value })}
-              className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-medium text-slate-900 bg-white"
+              value={editForm.lecturerId}
+              onChange={(e) => setEditForm({ ...editForm, lecturerId: e.target.value })}
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
             >
-              <option value="">-- Chọn Phòng học bố trí --</option>
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.building} - {r.roomNumber} (Sức chứa: {r.capacity} chỗ)
-                </option>
-              ))}
+              <option value="">-- Chưa phân công --</option>
+              {lecturers.map((lec) => {
+                const lId = lec.lecturerProfile?.id || lec.lecturerProfile?.lecturerProfileId || lec.id;
+                return (
+                  <option key={lec.id} value={lId}>
+                    {lec.fullName} ({lec.username})
+                  </option>
+                );
+              })}
             </select>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Hệ thống tự động kiểm tra trùng lịch dạy của giảng viên với các buổi học hiện tại của lớp.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Delete Section (UC-09) */}
+      <Modal
+        isOpen={!!deleteSection}
+        onClose={() => setDeleteSection(null)}
+        title="Xác nhận xóa Lớp Học Phần"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setDeleteSection(null)}>
+              Hủy
+            </Button>
+            <Button variant="danger" size="sm" loading={deleteLoading} onClick={handleDeleteSection}>
+              Xác nhận Xóa
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {deleteError && <BackendErrorAlert error={deleteError} onClose={() => setDeleteError(null)} />}
+          <div className="flex items-start space-x-3 text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-semibold">Bạn có chắc chắn muốn xóa vĩnh viễn lớp học phần này?</p>
+              <p className="mt-1 text-slate-600">
+                Lớp: <span className="font-bold text-slate-900">{deleteSection?.sectionCode}</span> ({deleteSection?.courseName}).
+              </p>
+              <p className="mt-1 text-slate-500">
+                Lưu ý: Chỉ cho phép xóa khi lớp chưa có sinh viên nào đăng ký (sĩ số = 0). Nếu lớp đã có sinh viên, hãy chọn chức năng "Hủy lớp".
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Manage Schedule Slots (UC-10) */}
+      <Modal
+        isOpen={!!selectedSectionForSlot}
+        onClose={() => setSelectedSectionForSlot(null)}
+        title={`Quản Lý Lịch Học: [${selectedSectionForSlot?.sectionCode}] ${selectedSectionForSlot?.courseName}`}
+        footer={
+          <Button variant="secondary" size="sm" onClick={() => setSelectedSectionForSlot(null)}>
+            Đóng
+          </Button>
+        }
+      >
+        <div className="space-y-5">
+          {slotError && <BackendErrorAlert error={slotError} onClose={() => setSlotError(null)} />}
+
+          {/* Current Schedule Slots List */}
+          <div>
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+              Các Buổi Học Hiện Tại ({(selectedSectionForSlot?.scheduleSlots || []).length}):
+            </h4>
+            {(selectedSectionForSlot?.scheduleSlots || []).length === 0 ? (
+              <div className="py-4 text-center text-xs text-slate-400 border border-dashed rounded-lg bg-slate-50">
+                Lớp học phần này hiện chưa được xếp buổi học nào.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(selectedSectionForSlot?.scheduleSlots || []).map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-indigo-700 mr-2">{slot.dayOfWeek}</span>
+                      <span className="font-mono text-slate-800 mr-2">Tiết {slot.startPeriod} - {slot.endPeriod}</span>
+                      <span className="text-slate-500">
+                        • Phòng: <span className="font-semibold text-slate-700">{slot.roomNumber} ({slot.building})</span>
+                        <span className="ml-1 text-[11px] text-slate-400">(sức chứa {slot.roomCapacity} chỗ)</span>
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDeleteSlot(slot.id)}
+                      loading={slotLoading}
+                    >
+                      Xóa buổi này
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* Form Add Slot */}
+          <form onSubmit={handleAddSlot} className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Thêm Buổi Học Mới:
+            </h4>
+            <div className="p-2.5 bg-amber-50 rounded border border-amber-200 text-[11px] text-amber-800">
+              Kiểm tra xung đột tự động: Phòng học và giảng viên không được trùng khung giờ với lớp khác trong kỳ. Sức chứa phòng phải &ge; chỉ tiêu lớp ({selectedSectionForSlot?.capacity || selectedSectionForSlot?.maxCapacity || 0} chỗ).
+            </div>
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Thứ Trong Tuần *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Phòng Học *</label>
               <select
-                value={slotForm.dayOfWeek}
-                onChange={(e) => setSlotForm({ ...slotForm, dayOfWeek: e.target.value })}
-                className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+                value={slotForm.roomId}
+                onChange={(e) => setSlotForm({ ...slotForm, roomId: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-medium text-slate-900 bg-white"
               >
-                <option value="MONDAY">Thứ Hai (Monday)</option>
-                <option value="TUESDAY">Thứ Ba (Tuesday)</option>
-                <option value="WEDNESDAY">Thứ Tư (Wednesday)</option>
-                <option value="THURSDAY">Thứ Năm (Thursday)</option>
-                <option value="FRIDAY">Thứ Sáu (Friday)</option>
-                <option value="SATURDAY">Thứ Bảy (Saturday)</option>
-                <option value="SUNDAY">Chủ Nhật (Sunday)</option>
+                <option value="">-- Chọn Phòng học bố trí --</option>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.building} - {r.roomNumber} (Sức chứa: {r.capacity} chỗ)
+                  </option>
+                ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Tiết Bắt Đầu (1-12) *</label>
-              <input
-                type="number"
-                min="1"
-                max="12"
-                value={slotForm.startPeriod}
-                onChange={(e) => setSlotForm({ ...slotForm, startPeriod: e.target.value })}
-                className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
-              />
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Thứ Trong Tuần *</label>
+                <select
+                  value={slotForm.dayOfWeek}
+                  onChange={(e) => setSlotForm({ ...slotForm, dayOfWeek: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+                >
+                  <option value="MONDAY">Thứ Hai</option>
+                  <option value="TUESDAY">Thứ Ba</option>
+                  <option value="WEDNESDAY">Thứ Tư</option>
+                  <option value="THURSDAY">Thứ Năm</option>
+                  <option value="FRIDAY">Thứ Sáu</option>
+                  <option value="SATURDAY">Thứ Bảy</option>
+                  <option value="SUNDAY">Chủ Nhật</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Tiết Bắt Đầu (1-12) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={slotForm.startPeriod}
+                  onChange={(e) => setSlotForm({ ...slotForm, startPeriod: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Tiết Kết Thúc *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={slotForm.endPeriod}
+                  onChange={(e) => setSlotForm({ ...slotForm, endPeriod: e.target.value })}
+                  className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Tiết Kết Thúc *</label>
-              <input
-                type="number"
-                min="1"
-                max="12"
-                value={slotForm.endPeriod}
-                onChange={(e) => setSlotForm({ ...slotForm, endPeriod: e.target.value })}
-                className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
-              />
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="primary" size="sm" loading={slotLoading} disabled={!slotForm.roomId}>
+                Thêm Buổi Học
+              </Button>
             </div>
-          </div>
+          </form>
         </div>
       </Modal>
 
@@ -525,7 +789,7 @@ const SectionsPage = () => {
       <Modal
         isOpen={!!selectedSectionForCap}
         onClose={() => setSelectedSectionForCap(null)}
-        title={`Điều Chỉnh Sức Chứa: [${selectedSectionForCap?.sectionCode}]`}
+        title={`Điều Chỉnh Sức Chứa: ${selectedSectionForCap?.sectionCode}`}
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setSelectedSectionForCap(null)}>
@@ -540,21 +804,25 @@ const SectionsPage = () => {
         <div className="space-y-4">
           {capError && <BackendErrorAlert error={capError} onClose={() => setCapError(null)} />}
 
-          <p className="text-xs text-slate-600">
-            Số sinh viên đang theo học hiện tại: <strong className="font-bold text-indigo-700">{selectedSectionForCap?.enrolledCount}</strong>.
-            Sức chứa mới không được nhỏ hơn số sinh viên đã đăng ký (thử nhập số nhỏ hơn để test <code className="font-bold text-rose-700">ERR_INVALID_CAPACITY_BOUND</code>).
-          </p>
+          <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded border">
+            <div>Số sinh viên đã đăng ký hiện tại: <span className="font-bold text-slate-900">{selectedSectionForCap?.enrolledCount || 0}</span></div>
+            <div>Sức chứa chỉ tiêu cũ: <span className="font-bold text-slate-900">{selectedSectionForCap?.capacity || selectedSectionForCap?.maxCapacity}</span></div>
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Sức Chứa Mới (C_new) *
+              Chỉ Tiêu Sức Chứa Mới (C_max) *
             </label>
             <input
               type="number"
+              min="1"
               value={newCapacity}
               onChange={(e) => setNewCapacity(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded border border-slate-300 font-mono text-slate-900 bg-white"
             />
+            <p className="text-[11px] text-slate-500 mt-1">
+              BR-09: Không được phép hạ sức chứa thấp hơn số sinh viên hiện đã đăng ký ({selectedSectionForCap?.enrolledCount || 0}).
+            </p>
           </div>
         </div>
       </Modal>

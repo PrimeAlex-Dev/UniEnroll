@@ -16,6 +16,8 @@ public interface RegistrationPhaseRepository extends JpaRepository<RegistrationP
     @EntityGraph(attributePaths = {"semester"})
     List<RegistrationPhase> findBySemesterId(Long semesterId);
 
+    boolean existsBySemesterId(Long semesterId);
+
     @EntityGraph(attributePaths = {"semester"})
     @Query("SELECT p FROM RegistrationPhase p WHERE p.semester.id = :semesterId AND :now >= p.startTime AND :now <= p.endTime")
     List<RegistrationPhase> findActivePhases(@Param("semesterId") Long semesterId, @Param("now") Instant now);

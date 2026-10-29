@@ -7,7 +7,19 @@ import Table from '../../components/common/Table';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import BackendErrorAlert from '../../components/common/BackendErrorAlert';
-import { Calendar, Plus, RefreshCw } from 'lucide-react';
+import { Calendar, Plus, RefreshCw, Edit3, Trash2, XCircle, AlertTriangle } from 'lucide-react';
+
+const toDatetimeLocal = (isoStr) => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const pad = (n) => String(n).padStart(2, '0');
+  const YYYY = d.getFullYear();
+  const MM = pad(d.getMonth() + 1);
+  const DD = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  return `${YYYY}-${MM}-${DD}T${hh}:${mm}`;
+};
 
 const PhasesPage = () => {
   const [phases, setPhases] = useState([]);
@@ -27,6 +39,23 @@ const PhasesPage = () => {
     endTime: '',
     targetCohort: '',
   });
+
+  // Edit / Extend Phase Modal
+  const [editPhase, setEditPhase] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    semesterId: '',
+    startTime: '',
+    endTime: '',
+    targetCohort: '',
+  });
+
+  // Delete Phase Modal
+  const [deletePhase, setDeletePhase] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -76,6 +105,70 @@ const PhasesPage = () => {
     }
   };
 
+  const handleOpenEdit = (p) => {
+    setEditPhase(p);
+    setEditFormData({
+      name: p.name || '',
+      semesterId: String(p.semesterId || selectedSemesterId),
+      startTime: toDatetimeLocal(p.startTime),
+      endTime: toDatetimeLocal(p.endTime),
+      targetCohort: p.targetCohort || '',
+    });
+    setEditError(null);
+  };
+
+  const handleUpdatePhase = async (e) => {
+    e.preventDefault();
+    if (!editPhase) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await registrationApi.updatePhase(editPhase.id, {
+        name: editFormData.name?.trim(),
+        semesterId: editFormData.semesterId ? Number(editFormData.semesterId) : Number(selectedSemesterId),
+        startTime: editFormData.startTime ? new Date(editFormData.startTime).toISOString() : null,
+        endTime: editFormData.endTime ? new Date(editFormData.endTime).toISOString() : null,
+        targetCohort: editFormData.targetCohort?.trim() || null,
+      });
+      setEditPhase(null);
+      fetchData();
+    } catch (err) {
+      console.error('Update phase failed:', err);
+      setEditError(err);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleClosePhaseNow = async (p) => {
+    if (!window.confirm(`Xác nhận ĐÓNG CỔNG NGAY LẬP TỨC cho đợt "${p.name}"? Sinh viên sẽ không thể gửi giao dịch đăng ký/hủy nữa.`)) {
+      return;
+    }
+    try {
+      await registrationApi.closePhaseNow(p.id);
+      fetchData();
+    } catch (err) {
+      console.error('Force close phase failed:', err);
+      setError(err);
+    }
+  };
+
+  const handleDeletePhase = async () => {
+    if (!deletePhase) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await registrationApi.deletePhase(deletePhase.id);
+      setDeletePhase(null);
+      fetchData();
+    } catch (err) {
+      console.error('Delete phase failed:', err);
+      setDeleteError(err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const getPhaseStatus = (start, end) => {
     const now = new Date();
     const s = new Date(start);
@@ -121,12 +214,57 @@ const PhasesPage = () => {
       align: 'center',
     },
     {
-      header: 'Trạng Thái Đợt (BR-01)',
+      header: 'Trạng Thái',
       render: (p) => {
         const status = getPhaseStatus(p.startTime, p.endTime);
         return <Badge variant={status.variant}>{status.label}</Badge>;
       },
       align: 'center',
+    },
+    {
+      header: 'Thao tác',
+      render: (p) => {
+        const status = getPhaseStatus(p.startTime, p.endTime);
+        return (
+          <div className="flex items-center justify-end space-x-1.5">
+            {status.variant === 'OPEN' && (
+              <Button
+                size="sm"
+                variant="danger"
+                icon={XCircle}
+                title="Đóng cổng khẩn cấp ngay bây giờ"
+                onClick={() => handleClosePhaseNow(p)}
+              >
+                Đóng ngay
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={Edit3}
+              title="Gia hạn hoặc chỉnh sửa đợt"
+              onClick={() => handleOpenEdit(p)}
+            >
+              {status.variant === 'OPEN' ? 'Gia hạn' : 'Sửa'}
+            </Button>
+            {status.variant === 'DRAFT' && (
+              <Button
+                size="sm"
+                variant="danger"
+                icon={Trash2}
+                title="Xóa đợt chưa bắt đầu"
+                onClick={() => {
+                  setDeletePhase(p);
+                  setDeleteError(null);
+                }}
+              >
+                Xóa
+              </Button>
+            )}
+          </div>
+        );
+      },
+      align: 'right',
     },
   ];
 
@@ -139,7 +277,7 @@ const PhasesPage = () => {
             <span>Cấu hình Đợt Đăng ký Học phần (UC-12)</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Thiết lập thời gian mở cổng (BR-01) và biên độ tín chỉ tối thiểu/tối đa (BR-04) cho sinh viên
+            Thiết lập cửa sổ thời gian (BR-01 Temporal Window) cho phép sinh viên đăng ký môn học theo khóa
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -247,6 +385,119 @@ const PhasesPage = () => {
               placeholder="ví dụ: K65 hoặc K2026 (để trống nếu áp dụng toàn trường)"
               className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
             />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal edit / extend phase */}
+      <Modal
+        isOpen={!!editPhase}
+        onClose={() => setEditPhase(null)}
+        title={`Chỉnh sửa / Gia hạn Đợt: ${editPhase?.name || ''}`}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setEditPhase(null)}>
+              Hủy
+            </Button>
+            <Button variant="primary" size="sm" loading={editLoading} onClick={handleUpdatePhase}>
+              Cập nhật
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {editError && <BackendErrorAlert error={editError} onClose={() => setEditError(null)} />}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Tên Đợt Đăng Ký *
+            </label>
+            <input
+              type="text"
+              value={editFormData.name}
+              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Học Kỳ Áp Dụng *</label>
+            <select
+              value={editFormData.semesterId}
+              onChange={(e) => setEditFormData({ ...editFormData, semesterId: e.target.value })}
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+            >
+              {semesters.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code || s.semesterCode} - {s.name || s.semesterName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Thời Gian Bắt Đầu *</label>
+              <input
+                type="datetime-local"
+                value={editFormData.startTime}
+                onChange={(e) => setEditFormData({ ...editFormData, startTime: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Thời Gian Kết Thúc (Gia hạn) *</label>
+              <input
+                type="datetime-local"
+                value={editFormData.endTime}
+                onChange={(e) => setEditFormData({ ...editFormData, endTime: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Khóa Sinh Viên Áp Dụng</label>
+            <input
+              type="text"
+              value={editFormData.targetCohort}
+              onChange={(e) => setEditFormData({ ...editFormData, targetCohort: e.target.value })}
+              placeholder="ví dụ: K65 hoặc K2026 (để trống nếu áp dụng toàn trường)"
+              className="w-full px-3 py-2 text-xs rounded border border-slate-300 text-slate-900 bg-white"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal delete phase */}
+      <Modal
+        isOpen={!!deletePhase}
+        onClose={() => setDeletePhase(null)}
+        title="Xác nhận xóa Đợt Đăng Ký"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setDeletePhase(null)}>
+              Hủy
+            </Button>
+            <Button variant="danger" size="sm" loading={deleteLoading} onClick={handleDeletePhase}>
+              Xác nhận Xóa
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {deleteError && <BackendErrorAlert error={deleteError} onClose={() => setDeleteError(null)} />}
+          <div className="flex items-start space-x-3 text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-semibold">Bạn có chắc chắn muốn xóa đợt đăng ký này?</p>
+              <p className="mt-1 text-slate-600">
+                Đợt: <span className="font-bold text-slate-900">{deletePhase?.name}</span>.
+              </p>
+              <p className="mt-1 text-slate-500">
+                Lưu ý: Chỉ cho phép xóa đợt đăng ký khi đợt đó chưa đến thời gian mở (trạng thái CHƯA MỞ).
+              </p>
+            </div>
           </div>
         </div>
       </Modal>

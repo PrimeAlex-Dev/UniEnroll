@@ -13,7 +13,7 @@ class ScheduleCollisionDetectorTest {
 
     @BeforeEach
     void setUp() {
-        sectionService = new CourseSectionService(null, null, null, null, null, null);
+        sectionService = new CourseSectionService(null, null, null, null, null, null, null);
     }
 
     @Test

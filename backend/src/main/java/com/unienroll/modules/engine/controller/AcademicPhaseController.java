@@ -50,4 +50,37 @@ public class AcademicPhaseController {
         List<RegistrationPhaseResponse> response = phaseService.getPhasesBySemester(semesterId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    /**
+     * UC-12: Cập nhật thông tin đợt đăng ký (Gia hạn thời gian)
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<RegistrationPhaseResponse>> updatePhase(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrationPhaseRequest request
+    ) {
+        RegistrationPhaseResponse response = phaseService.updatePhase(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-12: Đóng cổng đăng ký khẩn cấp (Force close)
+     */
+    @PutMapping("/{id}/close")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<RegistrationPhaseResponse>> closePhase(@PathVariable Long id) {
+        RegistrationPhaseResponse response = phaseService.closePhase(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-12: Xóa đợt đăng ký chưa bắt đầu
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deletePhase(@PathVariable Long id) {
+        phaseService.deletePhase(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

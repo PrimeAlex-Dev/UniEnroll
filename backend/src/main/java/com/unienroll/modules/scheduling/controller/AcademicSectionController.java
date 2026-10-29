@@ -48,8 +48,44 @@ public class AcademicSectionController {
             @PathVariable Long id,
             @Valid @RequestBody ScheduleSlotRequest slotRequest
     ) {
-        CourseSectionResponse response = sectionService.assignScheduleSlots(id, List.of(slotRequest));
+        CourseSectionResponse response = sectionService.addSingleScheduleSlot(id, slotRequest);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-10: Xóa 1 buổi học khỏi lớp học phần
+     */
+    @DeleteMapping("/{id}/slots/{slotId}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<CourseSectionResponse>> deleteScheduleSlot(
+            @PathVariable Long id,
+            @PathVariable Long slotId
+    ) {
+        CourseSectionResponse response = sectionService.deleteScheduleSlot(id, slotId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-09: Cập nhật thông tin Lớp học phần (Sửa GV, Mã lớp, Sức chứa)
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<CourseSectionResponse>> updateSection(
+            @PathVariable Long id,
+            @Valid @RequestBody CourseSectionRequest request
+    ) {
+        CourseSectionResponse response = sectionService.updateSection(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * UC-09: Xóa Lớp học phần rỗng
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteSection(@PathVariable Long id) {
+        sectionService.deleteSection(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     /**
