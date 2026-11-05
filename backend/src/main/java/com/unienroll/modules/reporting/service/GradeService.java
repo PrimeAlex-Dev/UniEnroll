@@ -114,6 +114,16 @@ public class GradeService {
     }
 
     /**
+     * Truy xuất toàn bộ bảng điểm tích lũy của sinh viên theo User ID
+     */
+    @Transactional(readOnly = true)
+    public List<GradeRecordResponse> getStudentTranscriptByUserId(Long userId) {
+        StudentProfile student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy hồ sơ sinh viên tương ứng với tài khoản"));
+        return getStudentTranscript(student.getId());
+    }
+
+    /**
      * Truy xuất toàn bộ bảng điểm tích lũy của sinh viên
      */
     @Transactional(readOnly = true)

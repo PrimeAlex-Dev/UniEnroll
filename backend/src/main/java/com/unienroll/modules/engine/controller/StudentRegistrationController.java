@@ -1,10 +1,6 @@
 package com.unienroll.modules.engine.controller;
 
-import com.unienroll.common.exception.BusinessException;
-import com.unienroll.common.exception.ErrorCode;
 import com.unienroll.common.response.ApiResponse;
-import com.unienroll.modules.auth.entity.StudentProfile;
-import com.unienroll.modules.auth.repository.StudentProfileRepository;
 import com.unienroll.modules.engine.dto.ActiveRegistrationsResponse;
 import com.unienroll.modules.engine.dto.EnrollmentRequest;
 import com.unienroll.modules.engine.dto.EnrollmentResponse;
@@ -27,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 public class StudentRegistrationController {
 
     private final RegistrationEngineService registrationEngineService;
-    private final StudentProfileRepository studentProfileRepository;
     private final ClassRosterService classRosterService;
 
     /**
@@ -39,10 +34,8 @@ public class StudentRegistrationController {
             @Valid @RequestBody EnrollmentRequest request,
             HttpServletRequest servletRequest
     ) {
-        Long studentId = getStudentId(userDetails);
         String clientIp = servletRequest.getRemoteAddr();
-
-        EnrollmentResponse response = registrationEngineService.enroll(studentId, request.getSectionId(), clientIp);
+        EnrollmentResponse response = registrationEngineService.enrollByUserId(userDetails.getId(), request.getSectionId(), clientIp);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -64,10 +57,8 @@ public class StudentRegistrationController {
             @PathVariable Long sectionId,
             HttpServletRequest servletRequest
     ) {
-        Long studentId = getStudentId(userDetails);
         String clientIp = servletRequest.getRemoteAddr();
-
-        EnrollmentResponse response = registrationEngineService.drop(studentId, sectionId, clientIp);
+        EnrollmentResponse response = registrationEngineService.dropByUserId(userDetails.getId(), sectionId, clientIp);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -88,8 +79,7 @@ public class StudentRegistrationController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam Long semesterId
     ) {
-        Long studentId = getStudentId(userDetails);
-        ActiveRegistrationsResponse response = registrationEngineService.getActiveRegistrations(studentId, semesterId);
+        ActiveRegistrationsResponse response = registrationEngineService.getActiveRegistrationsByUserId(userDetails.getId(), semesterId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -103,11 +93,5 @@ public class StudentRegistrationController {
     ) {
         ClassRosterResponse response = classRosterService.getClassRoster(userDetails.getId(), sectionId);
         return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    private Long getStudentId(CustomUserDetails userDetails) {
-        StudentProfile profile = studentProfileRepository.findByUserId(userDetails.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy hồ sơ sinh viên tương ứng với tài khoản"));
-        return profile.getId();
     }
 }

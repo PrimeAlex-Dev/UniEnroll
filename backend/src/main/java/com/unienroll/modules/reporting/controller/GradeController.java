@@ -1,10 +1,6 @@
 package com.unienroll.modules.reporting.controller;
 
-import com.unienroll.common.exception.BusinessException;
-import com.unienroll.common.exception.ErrorCode;
 import com.unienroll.common.response.ApiResponse;
-import com.unienroll.modules.auth.entity.StudentProfile;
-import com.unienroll.modules.auth.repository.StudentProfileRepository;
 import com.unienroll.modules.reporting.dto.GradeRecordRequest;
 import com.unienroll.modules.reporting.dto.GradeRecordResponse;
 import com.unienroll.modules.reporting.service.GradeService;
@@ -25,7 +21,6 @@ import java.util.List;
 public class GradeController {
 
     private final GradeService gradeService;
-    private final StudentProfileRepository studentProfileRepository;
 
     /**
      * Tra cứu bảng điểm tích lũy của chính sinh viên đang đăng nhập
@@ -35,9 +30,7 @@ public class GradeController {
     public ResponseEntity<ApiResponse<List<GradeRecordResponse>>> getMyTranscript(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        StudentProfile student = studentProfileRepository.findByUserId(userDetails.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy hồ sơ sinh viên tương ứng với tài khoản"));
-        List<GradeRecordResponse> response = gradeService.getStudentTranscript(student.getId());
+        List<GradeRecordResponse> response = gradeService.getStudentTranscriptByUserId(userDetails.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

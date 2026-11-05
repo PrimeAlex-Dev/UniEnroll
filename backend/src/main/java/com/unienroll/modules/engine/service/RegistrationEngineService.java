@@ -50,6 +50,38 @@ public class RegistrationEngineService {
     private final EntityManager entityManager;
 
     /**
+     * UC-14: Đăng ký Lớp học phần theo User ID của tài khoản đang đăng nhập
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public EnrollmentResponse enrollByUserId(Long userId, Long sectionId, String ipAddress) {
+        StudentProfile student = getStudentProfileByUserId(userId);
+        return enroll(student.getId(), sectionId, ipAddress);
+    }
+
+    /**
+     * UC-15: Hủy đăng ký Lớp học phần theo User ID của tài khoản đang đăng nhập
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public EnrollmentResponse dropByUserId(Long userId, Long sectionId, String ipAddress) {
+        StudentProfile student = getStudentProfileByUserId(userId);
+        return drop(student.getId(), sectionId, ipAddress);
+    }
+
+    /**
+     * UC-16: Xem thời khóa biểu theo User ID của tài khoản đang đăng nhập
+     */
+    @Transactional(readOnly = true)
+    public ActiveRegistrationsResponse getActiveRegistrationsByUserId(Long userId, Long semesterId) {
+        StudentProfile student = getStudentProfileByUserId(userId);
+        return getActiveRegistrations(student.getId(), semesterId);
+    }
+
+    private StudentProfile getStudentProfileByUserId(Long userId) {
+        return studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ERR_NOT_FOUND, "Không tìm thấy hồ sơ sinh viên tương ứng với tài khoản"));
+    }
+
+    /**
      * UC-14: ĐĂNG KÝ LỚP HỌC PHẦN (CORE TRANSACTION PIPELINE)
      * Thẩm tra tuần tự 6 Quy tắc Nghiệp vụ (BR-01 -> BR-06) và thực thi Khóa bi quan chống Race Condition.
      */
